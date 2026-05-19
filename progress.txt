@@ -1,3 +1,27 @@
 # Ralph Progress Log
 Started: Mon May 18 09:43:29 PM EDT 2026
 ---
+
+## Codebase Patterns
+- Use `bun:sqlite` Database for all persistence
+- Database is in-memory by default, use `DB_PATH` env var for file-based storage
+- API endpoints use Bun.serve() routes pattern with `Response.json()`
+- Frontend fetches data from `/api/columns` endpoint on mount
+- Tests use `bun:test` with `beforeEach` for cleanup via `resetDb()`
+
+## Mon May 19 2026 - US-001
+Thread: N/A
+- Implemented SQLite database layer with columns and tasks tables
+- Created default columns (Todo, In Progress, Done) on first run
+- Built API endpoint `/api/columns` returning columns with their tasks
+- Built Kanban board UI with horizontal column layout
+- Applied Solarized Dark color scheme (#002b36 background, #073642 columns)
+- Wrote 9 unit tests covering database initialization and default data
+- Files changed: src/db.ts, src/types.ts, src/index.ts, src/App.tsx, src/index.css, src/index.html, src/db.test.ts
+- **Learnings for future iterations:**
+  - Bun's SQLite (`bun:sqlite`) does NOT have a `.function()` method for custom SQL functions
+  - Database uses in-memory storage by default; set `DB_PATH` env for persistence
+  - `resetDb()` is needed in tests to get a fresh database per test
+  - Bun.serve() routes use object syntax with GET/POST methods as keys
+  - Frontend uses `fetch()` to `/api/columns` - no React Query or SWR
+---

@@ -22,7 +22,7 @@
         "Columns are displayed horizontally on the screen",
         "Each column shows its title and contains any existing tasks"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-002",
