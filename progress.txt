@@ -44,3 +44,21 @@ Thread: N/A
   - The `marked` library's `parse()` returns a string when called synchronously; use `{ async: false }` option
   - Form state uses inline pattern (show form in column's task list) rather than modal overlay
 ---
+
+## Mon May 19 2026 - US-003
+Thread: N/A
+- Implemented `updateTask()` in db.ts with title, description, and updated_at timestamp
+- Added PATCH `/api/tasks/:id` endpoint with title validation
+- Built EditTaskForm modal with overlay for editing task title and description
+- Added edit pencil icon button to TaskCard (visible on hover via CSS group-hover)
+- Modal cancels on backdrop click or cancel button
+- Refresh pattern: `refreshColumns()` called after save/cancel to sync state
+- Wrote 6 unit tests for updateTask covering: basic update, null description, column_id/position preservation, timestamp update, retrievability, partial update
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts
+- **Learnings for future iterations:**
+  - Edit UI uses modal overlay pattern (fixed inset-0 with backdrop) unlike AddTaskForm which is inline
+  - TaskCard uses CSS `group` class on parent and `group-hover:opacity-100` on edit button for hover reveal
+  - Edit button uses `e.stopPropagation()` to prevent card click handlers from firing
+  - PATCH endpoint at `/api/tasks/:id` follows REST convention (separate from column-scoped create endpoint)
+  - Modal form uses `onClick` on backdrop div for cancel, with `e.stopPropagation()` on inner content
+---

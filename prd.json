@@ -41,18 +41,18 @@
       "passes": true
     },
     {
-      "id": "US-003",
-      "title": "Edit Task",
-      "description": "As a user, I want to edit the title and description of an existing task, so I can update task information.",
-      "acceptance_criteria": [
-        "Each task has an edit button/icon",
-        "Clicking edit opens a modal with current title and description in editable fields",
-        "Changes are saved to SQLite database on submit",
-        "Changes are reflected immediately in the UI",
-        "Edit form can be cancelled without saving changes",
-        "Title validation (cannot be empty) applies to edits"
-      ],
-      "passes": false
+"id": "US-003",
+    "title": "Edit Task",
+    "description": "As a user, I want to edit the title and description of an existing task, so I can update task information.",
+    "acceptance_criteria": [
+      "Each task has an edit button/icon",
+      "Clicking edit opens a modal with current title and description in editable fields",
+      "Changes are saved to SQLite database on submit",
+      "Changes are reflected immediately in the UI",
+      "Edit form can be cancelled without saving changes",
+      "Title validation (cannot be empty) applies to edits"
+    ],
+    "passes": true
     },
     {
       "id": "US-004",
