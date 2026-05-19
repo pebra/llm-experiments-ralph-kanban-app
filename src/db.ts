@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { Column, Task } from "./types";
+import type { Column, Task } from "./types";
 
 const DB_PATH = process.env.DB_PATH || ":memory:";
 
@@ -63,6 +63,29 @@ export function getTasksByColumn(columnId: number): Task[] {
       .prepare("SELECT * FROM tasks WHERE column_id = ? ORDER BY position ASC")
       .all(columnId) as Task[]
   );
+}
+
+export function createTask(
+  columnId: number,
+  title: string,
+  description: string | null,
+): Task {
+  const db = getDb();
+  const maxPos = db
+    .prepare(
+      "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
+    )
+    .get(columnId) as { maxPos: number };
+  const position = (maxPos?.maxPos ?? -1) + 1;
+  const stmt = db.prepare(
+    "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
+  );
+  const result = stmt.run(columnId, title, description, position);
+  const insertedId = Number(result.lastInsertRowid);
+  const task = db
+    .prepare("SELECT * FROM tasks WHERE id = ?")
+    .get(insertedId) as Task;
+  return task;
 }
 
 export function resetDb(): void {

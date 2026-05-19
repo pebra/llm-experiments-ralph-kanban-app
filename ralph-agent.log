@@ -2,363 +2,540 @@
 > build · Qwen3.6-MTP-27B-Q8
 [0m
 [0m→ [0mRead prd.json
-[0m→ [0mRead progress.txt
-[0m→ [0mRead AGENTS.md
+[0m✱ [0mGlob "progress.txt"[90m 1 match[0m
 [0m→ [0mRead .
-[0m✱ [0mGlob "**/*"[90m in . · 100 matches[0m
-The highest priority failing story is **US-001: View Default Columns**. Let me explore the current project state and then implement it.
+[0m→ [0mRead progress.txt
+[0m→ [0mRead src
 [0m→ [0mRead package.json
+[0m→ [0mRead src/db.ts
+[0m→ [0mRead src/types.ts
 [0m→ [0mRead src/index.ts
 [0m→ [0mRead src/App.tsx
-[0m→ [0mRead src/index.html
-[0m→ [0mRead src/index.css
-[0m→ [0mRead tsconfig.json
-Let me read the existing source files to understand the current project structure.
-[0m→ [0mRead build.ts
-[0m→ [0mRead src/frontend.tsx
-[0m→ [0mRead src/APITester.tsx
-Let me also read the remaining source files:
+[0m→ [0mRead src/db.test.ts
 [0m
 [0m# [0mTodos
-[•] Create src/types.ts with Column and Task types
-[ ] Create src/db.ts with SQLite schema and init
-[ ] Update src/index.ts with API endpoints
-[ ] Update src/App.tsx with Kanban board UI
-[ ] Update src/index.css with Solarized Dark theme
-[ ] Update src/index.html title
-[ ] Create src/db.test.ts with unit tests
-[ ] Run quality checks and verify
+[•] Add createTask function to db.ts
+[ ] Add POST /api/columns/:id/tasks endpoint to index.ts
+[ ] Add Add Task button + form modal to App.tsx
+[ ] Add markdown rendering for task descriptions
+[ ] Write unit tests
+[ ] Run quality checks (test, typecheck)
+[ ] Commit, update PRD, update progress.txt
 [0m
-Now I have a full picture. Let me implement **US-001: View Default Columns**. I'll create the database layer, types, API endpoints, and UI.
-[0m← [0mWrite src/types.ts
-Wrote file successfully.
-[0m
-[0m← [0mWrite src/db.ts
-Wrote file successfully.
-[0m
-[0m# [0mTodos
-[✓] Create src/types.ts with Column and Task types
-[✓] Create src/db.ts with SQLite schema and init
-[•] Update src/index.ts with API endpoints
-[ ] Update src/App.tsx with Kanban board UI
-[ ] Update src/index.css with Solarized Dark theme
-[ ] Update src/index.html title
-[ ] Create src/db.test.ts with unit tests
-[ ] Run quality checks and verify
-[0m
-[0m← [0mWrite src/index.ts
-Wrote file successfully.
-[0m
-[0m← [0mWrite src/App.tsx
-Wrote file successfully.
-[0m
-[0m← [0mWrite src/index.css
-Wrote file successfully.
-[0m
-[0m← [0mWrite src/index.html
-Wrote file successfully.
-[0m
-Now let me update the server and UI files:
-Now let me create the tests:
-[0m← [0mWrite src/db.test.ts
-Wrote file successfully.
-[0m
-[0m# [0mTodos
-[✓] Create src/types.ts with Column and Task types
-[✓] Create src/db.ts with SQLite schema and init
-[✓] Update src/index.ts with API endpoints
-[✓] Update src/App.tsx with Kanban board UI
-[✓] Update src/index.css with Solarized Dark theme
-[✓] Update src/index.html title
-[✓] Create src/db.test.ts with unit tests
-[•] Run quality checks and verify
-[0m
-[0m$ [0mbun test src/db.test.ts 2>&1
-bun test v1.3.11 (af24e281)
-
-src/db.test.ts:
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:9:19)
-(fail) initializes database with default columns [1.00ms]
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:14:19)
-(fail) default columns have correct names
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:20:19)
-(fail) default columns have correct positions
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:26:19)
-(fail) columns are ordered by position
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:33:19)
-(fail) default columns have no tasks [1.00ms]
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:41:19)
-(fail) columns have valid IDs
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:49:19)
-(fail) columns have created_at timestamp
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:57:15)
-(fail) database is initialized only once per getDb call
- 6 | let db: Database | null = null;
- 7 | 
- 8 | export function getDb(): Database {
- 9 |   if (!db) {
-10 |     db = new Database(DB_PATH);
-11 |     db!.function({
-             ^
-TypeError: db.function is not a function. (In 'db.function({
-      name: "lower",
-      deterministic: !0,
-      xFunc: (s) => s.toLowerCase()
-    })', 'db.function' is undefined)
-      at getDb (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:11:9)
-      at getAllColumns (/home/pebra/Sync/Dev/ailab/trello13/src/db.ts:56:14)
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:64:20)
-(fail) does not duplicate default columns on re-init
-
- 0 pass
- 9 fail
-Ran 9 tests across 1 file. [35.00ms]
-[0m
-The `db.function` API doesn't exist in Bun's SQLite. Let me fix that:
+The highest priority failing story is **US-002: Create New Task**. Let me implement it.
 [0m← [0mEdit src/db.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -7,13 +7,8 @@
+@@ -64,8 +64,30 @@
+       .all(columnId) as Task[]
+   );
+ }
  
- export function getDb(): Database {
-   if (!db) {
-     db = new Database(DB_PATH);
--    db!.function({
--      name: "lower",
--      deterministic: true,
--      xFunc: (s: string) => s.toLowerCase(),
--    });
-     initDb(db!);
-   }
-   return db!;
++export function createTask(
++  columnId: number,
++  title: string,
++  description: string | null,
++): Task {
++  const db = getDb();
++  const maxPos = db
++    .prepare(
++      "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
++    )
++    .get(columnId) as { maxPos: number };
++  const position = (maxPos?.maxPos ?? -1) + 1;
++  const stmt = db.prepare(
++    "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
++  );
++  const result = stmt.run(columnId, title, description, position);
++  const task = db
++    .prepare("SELECT * FROM tasks WHERE id = ?")
++    .get(result.lastInsertRowId) as Task;
++  return task;
++}
++
+ export function resetDb(): void {
+   db?.close();
+   db = null;
  }
 
 [0m
-[0m$ [0mbun test src/db.test.ts 2>&1
+[0m# [0mTodos
+[✓] Add createTask function to db.ts
+[•] Add POST /api/columns/:id/tasks endpoint to index.ts
+[ ] Add Add Task button + form modal to App.tsx
+[ ] Add markdown rendering for task descriptions
+[ ] Write unit tests
+[ ] Run quality checks (test, typecheck)
+[ ] Commit, update PRD, update progress.txt
+[0m
+[0m← [0mEdit src/index.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+@@ -1,7 +1,7 @@
+ import { serve } from "bun";
+ import index from "./index.html";
+-import { getAllColumns, getTasksByColumn } from "./db";
++import { getAllColumns, getTasksByColumn, createTask } from "./db";
+ 
+ const server = serve({
+   routes: {
+     "/*": index,
+
+[0m
+[0m← [0mEdit src/index.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+@@ -22,8 +22,17 @@
+       const id = parseInt(req.params.id, 10);
+       const tasks = getTasksByColumn(id);
+       return Response.json(tasks);
+     },
++    async POST(req) {
++      const id = parseInt(req.params.id, 10);
++      const body = (await req.json()) as { title: string; description?: string };
++      if (!body.title || !body.title.trim()) {
++        return Response.json({ error: "Title is required" }, { status: 400 });
++      }
++      const task = createTask(id, body.title.trim(), body.description || null);
++      return Response.json(task, { status: 201 });
++    },
+   },
+ },
+ 
+ development: process.env.NODE_ENV !== "production" && {
+
+[0m
+Now let me check what's available for markdown rendering:
+[0m$ [0mls /home/pebra/Sync/Dev/ailab/trello13/node_modules/ | grep -i markdown
+(no output)
+[0m
+[0m$ [0mbun install marked
+bun add v1.3.11 (af24e281)
+Resolving dependencies
+Resolved, downloaded and extracted [4]
+Saved lockfile
+
+installed marked@18.0.3 with binaries:
+ - marked
+
+1 package installed [1321.00ms]
+[0m
+[0m$ [0mbun add -d @types/marked
+bun add v1.3.11 (af24e281)
+Resolving dependencies
+Resolved, downloaded and extracted [4]
+Saved lockfile
+
+installed @types/marked@6.0.0
+
+1 package installed [1111.00ms]
+[0m
+[0m# [0mTodos
+[✓] Add createTask function to db.ts
+[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
+[•] Add Add Task button + form modal to App.tsx
+[ ] Add markdown rendering for task descriptions
+[ ] Write unit tests
+[ ] Run quality checks (test, typecheck)
+[ ] Commit, update PRD, update progress.txt
+[0m
+[0m← [0mWrite src/App.tsx
+Wrote file successfully.
+[0m
+[0m→ [0mRead src/index.css
+[0m
+[0m← [0mEdit src/index.css
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.css
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/index.css
++++ /home/pebra/Sync/Dev/ailab/trello13/src/index.css
+@@ -11,5 +11,49 @@
+     background-color: #002b36;
+     color: #839496;
+     font-family: system-ui, -apple-system, sans-serif;
+   }
++
++  .prose {
++    max-width: none;
++  }
++
++  .prose p {
++    margin: 0 0 0.5em;
++  }
++
++  .prose p:last-child {
++    margin-bottom: 0;
++  }
++
++  .prose code {
++    background-color: #002b36;
++    padding: 0.1em 0.3em;
++    border-radius: 3px;
++    font-size: 0.85em;
++  }
++
++  .prose pre {
++    background-color: #002b36;
++    padding: 0.5em;
++    border-radius: 4px;
++    overflow-x: auto;
++  }
++
++  .prose ul, .prose ol {
++    margin: 0;
++    padding-left: 1.5em;
++  }
++
++  .prose a {
++    color: #268bd2;
++    text-decoration: underline;
++  }
++
++  .prose strong {
++    color: #93a1a1;
++  }
++
++  .prose em {
++    color: #586e75;
++  }
+ }
+
+[0m
+[0m# [0mTodos
+[✓] Add createTask function to db.ts
+[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
+[✓] Add Add Task button + form modal to App.tsx
+[✓] Add markdown rendering for task descriptions
+[•] Write unit tests
+[ ] Run quality checks (test, typecheck)
+[ ] Commit, update PRD, update progress.txt
+[0m
+[0m← [0mEdit src/db.test.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
+@@ -1,6 +1,6 @@
+ import { test, expect, beforeEach } from "bun:test";
+-import { getDb, getAllColumns, getTasksByColumn, resetDb } from "./db";
++import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask } from "./db";
+ 
+ beforeEach(() => {
+   resetDb();
+ });
+
+[0m
+[0m← [0mEdit src/db.test.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
+@@ -65,4 +65,56 @@
+   const columns2 = getAllColumns();
+   expect(columns1).toHaveLength(3);
+   expect(columns2).toHaveLength(3);
+ });
++
++test("createTask adds a task to a column", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const task = createTask(todoId, "Test Task", "Test description");
++  expect(task.id).toBeGreaterThan(0);
++  expect(task.title).toBe("Test Task");
++  expect(task.description).toBe("Test description");
++  expect(task.column_id).toBe(todoId);
++});
++
++test("createTask assigns incremental position", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const task1 = createTask(todoId, "Task 1", null);
++  const task2 = createTask(todoId, "Task 2", null);
++  expect(task2.position).toBeGreaterThan(task1.position);
++});
++
++test("createTask handles null description", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const task = createTask(todoId, "No Desc Task", null);
++  expect(task.description).toBeNull();
++});
++
++test("createTask returns task with timestamps", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const task = createTask(todoId, "Timestamp Task", null);
++  expect(task.created_at).toBeTruthy();
++  expect(task.updated_at).toBeTruthy();
++});
++
++test("createTask task is retrievable via getTasksByColumn", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  createTask(todoId, "Retrievable Task", "desc");
++  const tasks = getTasksByColumn(todoId);
++  expect(tasks).toHaveLength(1);
++  expect(tasks[0]!.title).toBe("Retrievable Task");
++});
++
++test("createTask tasks are ordered by position", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  createTask(todoId, "C", null);
++  createTask(todoId, "A", null);
++  createTask(todoId, "B", null);
++  const tasks = getTasksByColumn(todoId);
++  expect(tasks.map((t) => t.title)).toEqual(["C", "A", "B"]);
++});
+
+[0m
+[0m$ [0mbun test src/db.test.ts
 bun test v1.3.11 (af24e281)
 
- 9 pass
+src/db.test.ts:
+69 | 
+70 | test("createTask adds a task to a column", () => {
+71 |   const columns = getAllColumns();
+72 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+73 |   const task = createTask(todoId, "Test Task", "Test description");
+74 |   expect(task.id).toBeGreaterThan(0);
+              ^
+TypeError: null is not an object (evaluating 'task.id')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:74:10)
+(fail) createTask adds a task to a column [1.00ms]
+80 | test("createTask assigns incremental position", () => {
+81 |   const columns = getAllColumns();
+82 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+83 |   const task1 = createTask(todoId, "Task 1", null);
+84 |   const task2 = createTask(todoId, "Task 2", null);
+85 |   expect(task2.position).toBeGreaterThan(task1.position);
+              ^
+TypeError: null is not an object (evaluating 'task2.position')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:85:10)
+(fail) createTask assigns incremental position [1.00ms]
+87 | 
+88 | test("createTask handles null description", () => {
+89 |   const columns = getAllColumns();
+90 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+91 |   const task = createTask(todoId, "No Desc Task", null);
+92 |   expect(task.description).toBeNull();
+              ^
+TypeError: null is not an object (evaluating 'task.description')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:92:10)
+(fail) createTask handles null description
+94 | 
+95 | test("createTask returns task with timestamps", () => {
+96 |   const columns = getAllColumns();
+97 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+98 |   const task = createTask(todoId, "Timestamp Task", null);
+99 |   expect(task.created_at).toBeTruthy();
+              ^
+TypeError: null is not an object (evaluating 'task.created_at')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:99:10)
+(fail) createTask returns task with timestamps [1.00ms]
+
+ 11 pass
+ 4 fail
+ 26 expect() calls
+Ran 15 tests across 1 file. [17.00ms]
+[0m
+[0m← [0mEdit src/db.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+@@ -80,11 +80,12 @@
+   const stmt = db.prepare(
+     "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
+   );
+   const result = stmt.run(columnId, title, description, position);
++  const insertedId = Number(result.lastInsertRowId);
+   const task = db
+     .prepare("SELECT * FROM tasks WHERE id = ?")
+-    .get(result.lastInsertRowId) as Task;
++    .get(insertedId) as Task;
+   return task;
+ }
+ 
+ export function resetDb(): void {
+
+[0m
+The issue is `lastInsertRowId` returns a BigInt. Let me fix:
+[0m$ [0mbun test src/db.test.ts
+bun test v1.3.11 (af24e281)
+
+src/db.test.ts:
+69 | 
+70 | test("createTask adds a task to a column", () => {
+71 |   const columns = getAllColumns();
+72 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+73 |   const task = createTask(todoId, "Test Task", "Test description");
+74 |   expect(task.id).toBeGreaterThan(0);
+              ^
+TypeError: null is not an object (evaluating 'task.id')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:74:10)
+(fail) createTask adds a task to a column [1.00ms]
+80 | test("createTask assigns incremental position", () => {
+81 |   const columns = getAllColumns();
+82 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+83 |   const task1 = createTask(todoId, "Task 1", null);
+84 |   const task2 = createTask(todoId, "Task 2", null);
+85 |   expect(task2.position).toBeGreaterThan(task1.position);
+              ^
+TypeError: null is not an object (evaluating 'task2.position')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:85:10)
+(fail) createTask assigns incremental position [1.00ms]
+87 | 
+88 | test("createTask handles null description", () => {
+89 |   const columns = getAllColumns();
+90 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+91 |   const task = createTask(todoId, "No Desc Task", null);
+92 |   expect(task.description).toBeNull();
+              ^
+TypeError: null is not an object (evaluating 'task.description')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:92:10)
+(fail) createTask handles null description
+94 | 
+95 | test("createTask returns task with timestamps", () => {
+96 |   const columns = getAllColumns();
+97 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
+98 |   const task = createTask(todoId, "Timestamp Task", null);
+99 |   expect(task.created_at).toBeTruthy();
+              ^
+TypeError: null is not an object (evaluating 'task.created_at')
+      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:99:10)
+(fail) createTask returns task with timestamps
+
+ 11 pass
+ 4 fail
+ 26 expect() calls
+Ran 15 tests across 1 file. [16.00ms]
+[0m
+[0m$ [0mbun -e "
+const { Database } = require('bun:sqlite');
+const db = new Database(':memory:');
+db.exec('CREATE TABLE test (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+const result = db.prepare('INSERT INTO test (name) VALUES (?)').run('hello');
+console.log('result:', result);
+console.log('lastInsertRowId:', result.lastInsertRowId, typeof result.lastInsertRowId);
+console.log('Number:', Number(result.lastInsertRowId));
+const row = db.prepare('SELECT * FROM test WHERE id = ?').get(Number(result.lastInsertRowId));
+console.log('row:', row);
+"
+result: {
+  changes: 1,
+  lastInsertRowid: 1,
+}
+lastInsertRowId: undefined undefined
+Number: NaN
+row: null
+[0m
+The property is `lastInsertRowid` (lowercase `d`). Let me fix:
+[0m← [0mEdit src/db.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+@@ -80,9 +80,9 @@
+ const stmt = db.prepare(
+   "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
+ );
+ const result = stmt.run(columnId, title, description, position);
+-const insertedId = Number(result.lastInsertRowId);
++const insertedId = Number(result.lastInsertRowid);
+ const task = db
+   .prepare("SELECT * FROM tasks WHERE id = ?")
+   .get(insertedId) as Task;
+ return task;
+
+[0m
+[0m→ [0mRead src/db.ts
+[0m
+[0m$ [0mbun test src/db.test.ts
+bun test v1.3.11 (af24e281)
+
+ 15 pass
  0 fail
- 23 expect() calls
-Ran 9 tests across 1 file. [20.00ms]
+ 34 expect() calls
+Ran 15 tests across 1 file. [16.00ms]
 [0m
-All 9 tests pass. Let me verify the server compiles correctly:
-[0m$ [0mbun build --target=browser --outdir=/tmp/opencode src/index.ts 2>&1 | head -20
-1 | import { serve } from "bun";
-                          ^
-error: Browser build cannot import Bun builtin: "bun". When bundling for Bun, set target to 'bun'
-    at /home/pebra/Sync/Dev/ailab/trello13/src/index.ts:1:23
+[0m# [0mTodos
+[✓] Add createTask function to db.ts
+[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
+[✓] Add Add Task button + form modal to App.tsx
+[✓] Add markdown rendering for task descriptions
+[✓] Write unit tests
+[•] Run quality checks (test, typecheck)
+[ ] Commit, update PRD, update progress.txt
 [0m
-That's expected (server code uses Bun builtins). Let me verify TypeScript types:
-[0m$ [0mbunx tsc --noEmit 2>&1
-Resolving dependencies
-Resolved, downloaded and extracted [2]
-Saved lockfile
+[0m$ [0mbunx tsc --noEmit
 tsconfig.json(24,5): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
   Visit https://aka.ms/ts6 for migration information.
 [0m
-That's a pre-existing tsconfig deprecation warning. Let me verify the server actually works by starting it briefly:
-[0m$ [0mtimeout 5 bun src/index.ts 2>&1 || true
-Server running at http://localhost:3000/
+[0m$ [0mbunx tsc --noEmit --ignoreDeprecations 6.0 2>&1 || true
+src/App.tsx(3,10): error TS1484: 'ColumnWithTasks' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/App.tsx(3,27): error TS1484: 'Task' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/App.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './index.css'.
+src/db.ts(2,10): error TS1484: 'Column' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/db.ts(2,18): error TS1484: 'Task' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
 [0m
-Server starts. Let me verify the API endpoint:
-[0m$ [0mbun src/index.ts &
-sleep 2
-curl -s http://localhost:3000/api/columns | bun --eval "const data = JSON.parse(await new Blob([Buffer.from(Bun.stdin as any)]).arrayBuffer()); console.log(JSON.stringify(data, null, 2))"
-kill %1 2>/dev/null || true
-Server running at http://localhost:3000/
-1 | const data = JSON.parse(await new Blob([Buffer.from(Bun.stdin as any)]).arrayBuffer()); console.log(JSON.stringify(data, null, 2))
-              ^
-TypeError: The first argument must be of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received an instance of Blob
- code: "ERR_INVALID_ARG_TYPE"
-
-      at /home/pebra/Sync/Dev/ailab/trello13/[eval]:1:48
-      at loadAndEvaluateModule (2:1)
-
-Bun v1.3.11 (Linux x64)
-[0m
-[0m$ [0mkill %1 2>/dev/null; bun src/index.ts &
-sleep 2
-curl -s http://localhost:3000/api/columns
-kill %1 2>/dev/null || true
-Server running at http://localhost:3000/
-[{"column":{"id":1,"name":"Todo","position":0,"created_at":"2026-05-19 01:55:29"},"tasks":[]},{"column":{"id":2,"name":"In Progress","position":1,"created_at":"2026-05-19 01:55:29"},"tasks":[]},{"column":{"id":3,"name":"Done","position":2,"created_at":"2026-05-19 01:55:29"},"tasks":[]}]
-[0m
-[0m$ [0mgit status 2>&1
-fatal: not a git repository (or any parent up to mount point /)
-Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
-[0m
-API returns the 3 default columns correctly. Let me check git status and commit:
-[0m$ [0mgit init && git add -A && git commit -m "feat: [US-001] - View Default Columns" 2>&1
-Initialized empty Git repository in /home/pebra/Sync/Dev/ailab/trello13/.git/
-[main (root-commit) f39f511] feat: [US-001] - View Default Columns
- 26 files changed, 1616 insertions(+)
- create mode 100644 .gitignore
- create mode 100644 AGENTS.md
- create mode 100644 README.md
- create mode 100644 build.ts
- create mode 100644 bun-env.d.ts
- create mode 100644 bun.lock
- create mode 100644 bunfig.toml
- create mode 100644 fibonacci.rb
- create mode 100644 package.json
- create mode 100644 prd.json
- create mode 100644 progress.txt
- create mode 100644 ralph-agent.log
- create mode 100755 ralph.sh
- create mode 100644 ralph_prompt.md
- create mode 100644 src/APITester.tsx
- create mode 100644 src/App.tsx
- create mode 100644 src/db.test.ts
- create mode 100644 src/db.ts
- create mode 100644 src/frontend.tsx
- create mode 100644 src/index.css
- create mode 100644 src/index.html
- create mode 100644 src/index.ts
- create mode 100644 src/logo.svg
- create mode 100644 src/react.svg
- create mode 100644 src/types.ts
- create mode 100644 tsconfig.json
-[0m
-Now update the PRD and progress log:
-[0m← [0mEdit prd.json
-Index: /home/pebra/Sync/Dev/ailab/trello13/prd.json
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/prd.json
-+++ /home/pebra/Sync/Dev/ailab/trello13/prd.json
-@@ -21,9 +21,9 @@
-     "Default column names are: 'Todo', 'In Progress', 'Done'",
-     "Columns are displayed horizontally on the screen",
-     "Each column shows its title and contains any existing tasks"
-   ],
--  "passes": false
-+  "passes": true
- },
- {
-   "id": "US-002",
-   "title": "Create New Task",
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -1,7 +1,7 @@
+ import { useEffect, useState, useCallback } from "react";
+ import { marked } from "marked";
+-import { ColumnWithTasks, Task } from "./types";
++import type { ColumnWithTasks, Task } from "./types";
+ import "./index.css";
+ 
+ const renderer = new marked.Renderer();
+ marked.setOptions({
 
 [0m
-[0m← [0mWrite progress.txt
-Wrote file successfully.
-[0m
-[0m$ [0mkill %1 2>/dev/null; pkill -f "bun src/index.ts" 2>/dev/null; true
-(no output)
+[0m← [0mEdit src/db.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
+@@ -1,6 +1,6 @@
+ import { Database } from "bun:sqlite";
+-import { Column, Task } from "./types";
++import type { Column, Task } from "./types";
+ 
+ const DB_PATH = process.env.DB_PATH || ":memory:";
+ 
+ let db: Database | null = null;
 
-<shell_metadata>
-shell tool terminated command after exceeding timeout 300000 ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.
-</shell_metadata>
+[0m
+[0m→ [0mRead src/db.test.ts[90m [limit=5][0m
+[0m
+[0m$ [0mbunx tsc --noEmit --ignoreDeprecations 6.0 2>&1 || true
+src/App.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './index.css'.
+[0m
+[0m$ [0mbun test src/db.test.ts
+bun test v1.3.11 (af24e281)
+
+ 15 pass
+ 0 fail
+ 34 expect() calls
+Ran 15 tests across 1 file. [15.00ms]
+[0m
+The only remaining error is the pre-existing CSS import issue (Bun handles it at runtime). Let me verify tests still pass:
+[0m# [0mTodos
+[✓] Add createTask function to db.ts
+[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
+[✓] Add Add Task button + form modal to App.tsx
+[✓] Add markdown rendering for task descriptions
+[✓] Write unit tests
+[✓] Run quality checks (test, typecheck)
+[•] Commit, update PRD, update progress.txt
 [0m

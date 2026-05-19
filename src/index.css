@@ -12,4 +12,48 @@
     color: #839496;
     font-family: system-ui, -apple-system, sans-serif;
   }
+
+  .prose {
+    max-width: none;
+  }
+
+  .prose p {
+    margin: 0 0 0.5em;
+  }
+
+  .prose p:last-child {
+    margin-bottom: 0;
+  }
+
+  .prose code {
+    background-color: #002b36;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.85em;
+  }
+
+  .prose pre {
+    background-color: #002b36;
+    padding: 0.5em;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+
+  .prose ul, .prose ol {
+    margin: 0;
+    padding-left: 1.5em;
+  }
+
+  .prose a {
+    color: #268bd2;
+    text-decoration: underline;
+  }
+
+  .prose strong {
+    color: #93a1a1;
+  }
+
+  .prose em {
+    color: #586e75;
+  }
 }

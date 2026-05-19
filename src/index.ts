@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn } from "./db";
+import { getAllColumns, getTasksByColumn, createTask } from "./db";
 
 const server = serve({
   routes: {
@@ -22,6 +22,15 @@ const server = serve({
         const id = parseInt(req.params.id, 10);
         const tasks = getTasksByColumn(id);
         return Response.json(tasks);
+      },
+      async POST(req) {
+        const id = parseInt(req.params.id, 10);
+        const body = (await req.json()) as { title: string; description?: string };
+        if (!body.title || !body.title.trim()) {
+          return Response.json({ error: "Title is required" }, { status: 400 });
+        }
+        const task = createTask(id, body.title.trim(), body.description || null);
+        return Response.json(task, { status: 201 });
       },
     },
   },
