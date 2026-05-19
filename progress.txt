@@ -58,7 +58,25 @@ Thread: N/A
 - **Learnings for future iterations:**
   - Edit UI uses modal overlay pattern (fixed inset-0 with backdrop) unlike AddTaskForm which is inline
   - TaskCard uses CSS `group` class on parent and `group-hover:opacity-100` on edit button for hover reveal
-  - Edit button uses `e.stopPropagation()` to prevent card click handlers from firing
-  - PATCH endpoint at `/api/tasks/:id` follows REST convention (separate from column-scoped create endpoint)
-  - Modal form uses `onClick` on backdrop div for cancel, with `e.stopPropagation()` on inner content
----
+- Edit button uses `e.stopPropagation()` to prevent card click handlers from firing
+   - PATCH endpoint at `/api/tasks/:id` follows REST convention (separate from column-scoped create endpoint)
+   - Modal form uses `onClick` on backdrop div for cancel, with `e.stopPropagation()` on inner content
+ ---
+
+## Mon May 19 2026 - US-004
+Thread: N/A
+- Implemented `deleteTask()` in db.ts using SQLite DELETE statement, returns boolean for success/failure
+- Added DELETE `/api/tasks/:id` endpoint returning 204 on success, 404 if task not found
+- Added delete button (× icon) to TaskCard, shown on hover alongside edit button
+- Built DeleteTaskConfirmation modal with task title display and destructive red styling
+- Delete uses same modal overlay pattern as EditTaskForm (backdrop click to cancel)
+- After successful deletion, calls refreshColumns() to sync UI state
+- Wrote 6 unit tests for deleteTask covering: basic deletion, non-existent task, selective deletion, visibility via getAllColumns, cross-column isolation
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
+- **Learnings for future iterations:**
+  - DELETE endpoint returns 204 No Content on success (no body), 404 with JSON error body when task not found
+  - Delete confirmation modal follows same fixed inset-0 backdrop pattern as edit modal
+  - TaskCard action buttons are in a flex container with `gap-1`, both using `group-hover:opacity-100`
+  - Delete button uses red (#dc322f) hover color to signal destructive action
+  - `result.changes` from bun:sqlite DELETE returns number of affected rows
+ ---
