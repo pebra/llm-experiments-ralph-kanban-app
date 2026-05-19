@@ -24,4 +24,23 @@ Thread: N/A
   - `resetDb()` is needed in tests to get a fresh database per test
   - Bun.serve() routes use object syntax with GET/POST methods as keys
   - Frontend uses `fetch()` to `/api/columns` - no React Query or SWR
+- Bun SQLite `Result` uses `lastInsertRowid` (lowercase 'd'), not `lastInsertRowId`
+- Use `import type` for type-only imports when `verbatimModuleSyntax` is enabled
+---
+
+## Mon May 19 2026 - US-002
+Thread: N/A
+- Implemented `createTask()` in db.ts with auto-incrementing position per column
+- Added POST `/api/columns/:id/tasks` endpoint with title validation
+- Built inline Add Task form in each column with title/description fields
+- Integrated `marked` library for markdown rendering in task descriptions
+- Added prose CSS styles for rendered markdown content
+- Wrote 7 unit tests for createTask covering: basic creation, position ordering, null description, timestamps, retrievability
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/index.css, src/db.test.ts, package.json, bun.lock
+- **Learnings for future iterations:**
+  - Bun SQLite `Result` object uses `lastInsertRowid` (lowercase 'd'), NOT `lastInsertRowId`
+  - With `verbatimModuleSyntax`, type imports must use `import type` syntax
+  - CSS side-effect imports (`import './index.css'`) cause TS errors but work at runtime with Bun
+  - The `marked` library's `parse()` returns a string when called synchronously; use `{ async: false }` option
+  - Form state uses inline pattern (show form in column's task list) rather than modal overlay
 ---

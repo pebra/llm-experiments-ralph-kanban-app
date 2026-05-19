@@ -38,7 +38,7 @@
         "New task appears immediately in the column without page refresh",
         "Form can be cancelled without creating a task"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-003",
