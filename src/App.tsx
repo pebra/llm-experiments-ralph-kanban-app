@@ -10,7 +10,7 @@ marked.setOptions({
   breaks: false,
 });
 
-function TaskCard({ task, onEdit }: { task: Task; onEdit: (task: Task) => void }) {
+function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (task: Task) => void }) {
   const htmlDescription = task.description
     ? marked.parse(task.description, { async: false })
     : null;
@@ -21,13 +21,22 @@ function TaskCard({ task, onEdit }: { task: Task; onEdit: (task: Task) => void }
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[#839496] font-medium flex-1">{task.title}</p>
-        <button
-          onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-          className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
-          title="Edit task"
-        >
-          &#9998;
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
+            title="Edit task"
+          >
+            &#9998;
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(task); }}
+            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
+            title="Delete task"
+          >
+            &times;
+          </button>
+        </div>
       </div>
       {htmlDescription && (
         <div
@@ -214,16 +223,79 @@ function EditTaskForm({
   );
 }
 
+function DeleteTaskConfirmation({
+  task,
+  onCancel,
+  onConfirm,
+}: {
+  task: Task;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        return;
+      }
+      onConfirm();
+    } catch {
+      // silently fail, user can retry
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+      <div
+        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Task</h2>
+        <p className="text-[#839496] mb-4">
+          Are you sure you want to delete &ldquo;{task.title}&rdquo;? This action cannot be undone.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColumnCard({
   column,
   tasks,
   onTaskCreated,
   onTaskEdit,
+  onTaskDelete,
 }: {
   column: ColumnWithTasks["column"];
   tasks: Task[];
   onTaskCreated: (columnId: number, task: Task) => void;
   onTaskEdit: (task: Task) => void;
+  onTaskDelete: (task: Task) => void;
 }) {
   const [addingTask, setAddingTask] = useState(false);
 
@@ -240,7 +312,7 @@ function ColumnCard({
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-y-auto">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onEdit={onTaskEdit} />
+          <TaskCard key={task.id} task={task} onEdit={onTaskEdit} onDelete={onTaskDelete} />
         ))}
         {addingTask ? (
           <AddTaskForm
@@ -266,6 +338,7 @@ export function App() {
   const [columns, setColumns] = useState<ColumnWithTasks[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
 
   const refreshColumns = useCallback(async () => {
     const res = await fetch("/api/columns");
@@ -295,6 +368,19 @@ export function App() {
     setEditingTask(null);
   };
 
+  const handleTaskDelete = (task: Task) => {
+    setDeletingTask(task);
+  };
+
+  const handleDeleteConfirm = () => {
+    setDeletingTask(null);
+    refreshColumns();
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingTask(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#002b36] flex items-center justify-center">
@@ -314,6 +400,7 @@ export function App() {
             tasks={tasks}
             onTaskCreated={handleTaskCreated}
             onTaskEdit={handleTaskEdit}
+            onTaskDelete={handleTaskDelete}
           />
         ))}
       </div>
@@ -322,6 +409,13 @@ export function App() {
           task={editingTask}
           onCancel={handleEditCancel}
           onSave={handleTaskSaved}
+        />
+      )}
+      {deletingTask && (
+        <DeleteTaskConfirmation
+          task={deletingTask}
+          onCancel={handleDeleteCancel}
+          onConfirm={handleDeleteConfirm}
         />
       )}
     </div>

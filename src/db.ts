@@ -103,6 +103,14 @@ export function updateTask(
   return task;
 }
 
+export function deleteTask(taskId: number): boolean {
+  const db = getDb();
+  const result = db
+    .prepare("DELETE FROM tasks WHERE id = ?")
+    .run(taskId);
+  return (result.changes ?? 0) > 0;
+}
+
 export function resetDb(): void {
   db?.close();
   db = null;

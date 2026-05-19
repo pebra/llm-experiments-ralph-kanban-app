@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -166,10 +166,58 @@ test("updateTask changes are visible via getTasksByColumn", () => {
 });
 
 test("updateTask only updates title keeping description", () => {
+   const columns = getAllColumns();
+   const todoId = columns.find((c) => c.name === "Todo")!.id;
+   const task = createTask(todoId, "Original", "keep this");
+   const updated = updateTask(task.id, "Changed", "keep this");
+   expect(updated.title).toBe("Changed");
+   expect(updated.description).toBe("keep this");
+ });
+
+test("deleteTask removes a task from the database", () => {
   const columns = getAllColumns();
   const todoId = columns.find((c) => c.name === "Todo")!.id;
-  const task = createTask(todoId, "Original", "keep this");
-  const updated = updateTask(task.id, "Changed", "keep this");
-  expect(updated.title).toBe("Changed");
-  expect(updated.description).toBe("keep this");
+  const task = createTask(todoId, "To Delete", "desc");
+  const result = deleteTask(task.id);
+  expect(result).toBe(true);
+  const tasks = getTasksByColumn(todoId);
+  expect(tasks).toHaveLength(0);
+});
+
+test("deleteTask returns false for non-existent task", () => {
+  const result = deleteTask(99999);
+  expect(result).toBe(false);
+});
+
+test("deleteTask only deletes the specified task", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task1 = createTask(todoId, "Keep", "desc1");
+  const task2 = createTask(todoId, "Delete", "desc2");
+  const task3 = createTask(todoId, "Keep Too", "desc3");
+  deleteTask(task2.id);
+  const tasks = getTasksByColumn(todoId);
+  expect(tasks).toHaveLength(2);
+  expect(tasks.map((t) => t.title)).toEqual(["Keep", "Keep Too"]);
+});
+
+test("deleteTask removes task visible via getAllColumns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  createTask(todoId, "Will Delete", "desc");
+  expect(getTasksByColumn(todoId)).toHaveLength(1);
+  const taskToDelete = getTasksByColumn(todoId)[0]!;
+  deleteTask(taskToDelete.id);
+  expect(getTasksByColumn(todoId)).toHaveLength(0);
+});
+
+test("deleteTask does not affect tasks in other columns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  const todoTask = createTask(todoId, "Todo Task", "desc");
+  createTask(doneId, "Done Task", "desc");
+  deleteTask(todoTask.id);
+  expect(getTasksByColumn(todoId)).toHaveLength(0);
+  expect(getTasksByColumn(doneId)).toHaveLength(1);
 });

@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask } from "./db";
 
 const server = serve({
   routes: {
@@ -43,6 +43,14 @@ const server = serve({
         }
         const task = updateTask(id, body.title.trim(), body.description ?? null);
         return Response.json(task);
+      },
+      async DELETE(req) {
+        const id = parseInt(req.params.id, 10);
+        const deleted = deleteTask(id);
+        if (!deleted) {
+          return Response.json({ error: "Task not found" }, { status: 404 });
+        }
+        return new Response(null, { status: 204 });
       },
     },
   },

@@ -8,51 +8,38 @@
 [0m→ [0mRead src
 [0m→ [0mRead package.json
 [0m→ [0mRead src/db.ts
-[0m→ [0mRead src/types.ts
 [0m→ [0mRead src/index.ts
 [0m→ [0mRead src/App.tsx
+[0m→ [0mRead src/types.ts
 [0m→ [0mRead src/db.test.ts
+Now let me read the existing tests:
 [0m
 [0m# [0mTodos
-[•] Add createTask function to db.ts
-[ ] Add POST /api/columns/:id/tasks endpoint to index.ts
-[ ] Add Add Task button + form modal to App.tsx
-[ ] Add markdown rendering for task descriptions
-[ ] Write unit tests
-[ ] Run quality checks (test, typecheck)
+[•] Add deleteTask() function to src/db.ts
+[ ] Add DELETE /api/tasks/:id endpoint to src/index.ts
+[ ] Add delete button + confirmation modal to App.tsx
+[ ] Write unit tests for deleteTask
+[ ] Run quality checks (tests, typecheck)
 [ ] Commit, update PRD, update progress.txt
 [0m
-The highest priority failing story is **US-002: Create New Task**. Let me implement it.
+The highest priority failing story is **US-004: Delete Task**. Let me implement it.
+Continuing US-004 implementation. Adding `deleteTask()` to db.ts:
 [0m← [0mEdit src/db.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -64,8 +64,30 @@
-       .all(columnId) as Task[]
-   );
+@@ -102,8 +102,16 @@
+     .get(taskId) as Task;
+   return task;
  }
  
-+export function createTask(
-+  columnId: number,
-+  title: string,
-+  description: string | null,
-+): Task {
++export function deleteTask(taskId: number): boolean {
 +  const db = getDb();
-+  const maxPos = db
-+    .prepare(
-+      "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
-+    )
-+    .get(columnId) as { maxPos: number };
-+  const position = (maxPos?.maxPos ?? -1) + 1;
-+  const stmt = db.prepare(
-+    "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
-+  );
-+  const result = stmt.run(columnId, title, description, position);
-+  const task = db
-+    .prepare("SELECT * FROM tasks WHERE id = ?")
-+    .get(result.lastInsertRowId) as Task;
-+  return task;
++  const result = db
++    .prepare("DELETE FROM tasks WHERE id = ?")
++    .run(taskId);
++  return (result.changes ?? 0) > 0;
 +}
 +
  export function resetDb(): void {
@@ -60,15 +47,6 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
    db = null;
  }
 
-[0m
-[0m# [0mTodos
-[✓] Add createTask function to db.ts
-[•] Add POST /api/columns/:id/tasks endpoint to index.ts
-[ ] Add Add Task button + form modal to App.tsx
-[ ] Add markdown rendering for task descriptions
-[ ] Write unit tests
-[ ] Run quality checks (test, typecheck)
-[ ] Commit, update PRD, update progress.txt
 [0m
 [0m← [0mEdit src/index.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
@@ -78,32 +56,32 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 @@ -1,7 +1,7 @@
  import { serve } from "bun";
  import index from "./index.html";
--import { getAllColumns, getTasksByColumn } from "./db";
-+import { getAllColumns, getTasksByColumn, createTask } from "./db";
+-import { getAllColumns, getTasksByColumn, createTask, updateTask } from "./db";
++import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask } from "./db";
  
  const server = serve({
    routes: {
      "/*": index,
 
 [0m
+Now adding the DELETE endpoint to index.ts:
 [0m← [0mEdit src/index.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
-@@ -22,8 +22,17 @@
-       const id = parseInt(req.params.id, 10);
-       const tasks = getTasksByColumn(id);
-       return Response.json(tasks);
+@@ -43,8 +43,16 @@
+       }
+       const task = updateTask(id, body.title.trim(), body.description ?? null);
+       return Response.json(task);
      },
-+    async POST(req) {
++    async DELETE(req) {
 +      const id = parseInt(req.params.id, 10);
-+      const body = (await req.json()) as { title: string; description?: string };
-+      if (!body.title || !body.title.trim()) {
-+        return Response.json({ error: "Title is required" }, { status: 400 });
++      const deleted = deleteTask(id);
++      if (!deleted) {
++        return Response.json({ error: "Task not found" }, { status: 404 });
 +      }
-+      const task = createTask(id, body.title.trim(), body.description || null);
-+      return Response.json(task, { status: 201 });
++      return new Response(null, { status: 204 });
 +    },
    },
  },
@@ -111,111 +89,266 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
  development: process.env.NODE_ENV !== "production" && {
 
 [0m
-Now let me check what's available for markdown rendering:
-[0m$ [0mls /home/pebra/Sync/Dev/ailab/trello13/node_modules/ | grep -i markdown
-(no output)
-[0m
-[0m$ [0mbun install marked
-bun add v1.3.11 (af24e281)
-Resolving dependencies
-Resolved, downloaded and extracted [4]
-Saved lockfile
-
-installed marked@18.0.3 with binaries:
- - marked
-
-1 package installed [1321.00ms]
-[0m
-[0m$ [0mbun add -d @types/marked
-bun add v1.3.11 (af24e281)
-Resolving dependencies
-Resolved, downloaded and extracted [4]
-Saved lockfile
-
-installed @types/marked@6.0.0
-
-1 package installed [1111.00ms]
-[0m
-[0m# [0mTodos
-[✓] Add createTask function to db.ts
-[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
-[•] Add Add Task button + form modal to App.tsx
-[ ] Add markdown rendering for task descriptions
-[ ] Write unit tests
-[ ] Run quality checks (test, typecheck)
-[ ] Commit, update PRD, update progress.txt
-[0m
-[0m← [0mWrite src/App.tsx
-Wrote file successfully.
-[0m
-[0m→ [0mRead src/index.css
-[0m
-[0m← [0mEdit src/index.css
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.css
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/index.css
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/index.css
-@@ -11,5 +11,49 @@
-     background-color: #002b36;
-     color: #839496;
-     font-family: system-ui, -apple-system, sans-serif;
-   }
-+
-+  .prose {
-+    max-width: none;
-+  }
-+
-+  .prose p {
-+    margin: 0 0 0.5em;
-+  }
-+
-+  .prose p:last-child {
-+    margin-bottom: 0;
-+  }
-+
-+  .prose code {
-+    background-color: #002b36;
-+    padding: 0.1em 0.3em;
-+    border-radius: 3px;
-+    font-size: 0.85em;
-+  }
-+
-+  .prose pre {
-+    background-color: #002b36;
-+    padding: 0.5em;
-+    border-radius: 4px;
-+    overflow-x: auto;
-+  }
-+
-+  .prose ul, .prose ol {
-+    margin: 0;
-+    padding-left: 1.5em;
-+  }
-+
-+  .prose a {
-+    color: #268bd2;
-+    text-decoration: underline;
-+  }
-+
-+  .prose strong {
-+    color: #93a1a1;
-+  }
-+
-+  .prose em {
-+    color: #586e75;
-+  }
- }
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -9,9 +9,9 @@
+   gfm: true,
+   breaks: false,
+ });
+ 
+-function TaskCard({ task, onEdit }: { task: Task; onEdit: (task: Task) => void }) {
++function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (task: Task) => void }) {
+   const htmlDescription = task.description
+     ? marked.parse(task.description, { async: false })
+     : null;
+ 
+@@ -20,15 +20,24 @@
+       className="bg-[#002b36] rounded p-3 border border-[#586e75] cursor-pointer hover:border-[#268bd2] transition-colors group relative"
+     >
+       <div className="flex items-start justify-between gap-2">
+         <p className="text-[#839496] font-medium flex-1">{task.title}</p>
+-        <button
+-          onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+-          className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
+-          title="Edit task"
+-        >
+-          &#9998;
+-        </button>
++        <div className="flex gap-1">
++          <button
++            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
++            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
++            title="Edit task"
++          >
++            &#9998;
++          </button>
++          <button
++            onClick={(e) => { e.stopPropagation(); onDelete(task); }}
++            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
++            title="Delete task"
++          >
++            &times;
++          </button>
++        </div>
+       </div>
+       {htmlDescription && (
+         <div
+           className="text-[#586e75] text-sm mt-1 line-clamp-2 prose prose-invert prose-max-w-none"
 
 [0m
-[0m# [0mTodos
-[✓] Add createTask function to db.ts
-[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
-[✓] Add Add Task button + form modal to App.tsx
-[✓] Add markdown rendering for task descriptions
-[•] Write unit tests
-[ ] Run quality checks (test, typecheck)
-[ ] Commit, update PRD, update progress.txt
+Now adding the delete UI to App.tsx - delete button on TaskCard, confirmation modal, and App wiring:
+Now adding the DeleteTaskConfirmation modal after EditTaskForm:
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -222,8 +222,69 @@
+     </div>
+   );
+ }
+ 
++function DeleteTaskConfirmation({
++  task,
++  onCancel,
++  onConfirm,
++}: {
++  task: Task;
++  onCancel: () => void;
++  onConfirm: () => void;
++}) {
++  const [deleting, setDeleting] = useState(false);
++
++  const handleDelete = async () => {
++    setDeleting(true);
++    try {
++      const res = await fetch(`/api/tasks/${task.id}`, {
++        method: "DELETE",
++      });
++      if (!res.ok) {
++        return;
++      }
++      onConfirm();
++    } catch {
++      // silently fail, user can retry
++    } finally {
++      setDeleting(false);
++    }
++  };
++
++  return (
++    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
++      <div
++        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
++        onClick={(e) => e.stopPropagation()}
++      >
++        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Task</h2>
++        <p className="text-[#839496] mb-4">
++          Are you sure you want to delete &ldquo;{task.title}&rdquo;? This action cannot be undone.
++        </p>
++        <div className="flex gap-2 justify-end">
++          <button
++            type="button"
++            onClick={onCancel}
++            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
++            disabled={deleting}
++          >
++            Cancel
++          </button>
++          <button
++            type="button"
++            onClick={handleDelete}
++            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
++            disabled={deleting}
++          >
++            {deleting ? "Deleting..." : "Delete"}
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++}
++
+ function ColumnCard({
+   column,
+   tasks,
+   onTaskCreated,
+
 [0m
+Now updating ColumnCard to accept onDelete prop:
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -288,13 +288,15 @@
+   column,
+   tasks,
+   onTaskCreated,
+   onTaskEdit,
++  onTaskDelete,
+ }: {
+   column: ColumnWithTasks["column"];
+   tasks: Task[];
+   onTaskCreated: (columnId: number, task: Task) => void;
+   onTaskEdit: (task: Task) => void;
++  onTaskDelete: (task: Task) => void;
+ }) {
+   const [addingTask, setAddingTask] = useState(false);
+ 
+   const handleTaskCreated = (task: Task) => {
+
+[0m
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -311,9 +311,9 @@
+   <span className="text-[#586e75] text-sm">{tasks.length}</span>
+ </div>
+ <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+   {tasks.map((task) => (
+-    <TaskCard key={task.id} task={task} onEdit={onTaskEdit} />
++    <TaskCard key={task.id} task={task} onEdit={onTaskEdit} onDelete={onTaskDelete} />
+   ))}
+   {addingTask ? (
+     <AddTaskForm
+       columnId={column.id}
+
+[0m
+Now passing onDelete to TaskCard inside ColumnCard:
+Now wiring up the App component with delete state and handlers:
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -337,8 +337,9 @@
+ export function App() {
+   const [columns, setColumns] = useState<ColumnWithTasks[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [editingTask, setEditingTask] = useState<Task | null>(null);
++  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+ 
+   const refreshColumns = useCallback(async () => {
+     const res = await fetch("/api/columns");
+     const data = (await res.json()) as ColumnWithTasks[];
+
+[0m
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -367,8 +367,21 @@
+ const handleEditCancel = () => {
+   setEditingTask(null);
+ };
+ 
++const handleTaskDelete = (task: Task) => {
++  setDeletingTask(task);
++};
++
++const handleDeleteConfirm = () => {
++  setDeletingTask(null);
++  refreshColumns();
++};
++
++const handleDeleteCancel = () => {
++  setDeletingTask(null);
++};
++
+ if (loading) {
+   return (
+     <div className="min-h-screen bg-[#002b36] flex items-center justify-center">
+       <p className="text-[#839496]">Loading board...</p>
+
+[0m
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -399,8 +399,9 @@
+       column={column}
+       tasks={tasks}
+       onTaskCreated={handleTaskCreated}
+       onTaskEdit={handleTaskEdit}
++      onTaskDelete={handleTaskDelete}
+     />
+   ))}
+ </div>
+ {editingTask && (
+
+[0m
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -410,8 +410,15 @@
+           onCancel={handleEditCancel}
+           onSave={handleTaskSaved}
+         />
+       )}
++      {deletingTask && (
++        <DeleteTaskConfirmation
++          task={deletingTask}
++          onCancel={handleDeleteCancel}
++          onConfirm={handleDeleteConfirm}
++        />
++      )}
+     </div>
+   );
+ }
+ 
+
+[0m
+Now writing unit tests for `deleteTask`:
 [0m← [0mEdit src/db.test.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 ===================================================================
@@ -223,8 +356,8 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 @@ -1,6 +1,6 @@
  import { test, expect, beforeEach } from "bun:test";
--import { getDb, getAllColumns, getTasksByColumn, resetDb } from "./db";
-+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask } from "./db";
+-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask } from "./db";
++import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask } from "./db";
  
  beforeEach(() => {
    resetDb();
@@ -236,360 +369,89 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
-@@ -65,4 +65,56 @@
-   const columns2 = getAllColumns();
-   expect(columns1).toHaveLength(3);
-   expect(columns2).toHaveLength(3);
+@@ -165,11 +165,59 @@
+   expect(tasks[0]!.description).toBe("new");
+ });
+ 
+ test("updateTask only updates title keeping description", () => {
++   const columns = getAllColumns();
++   const todoId = columns.find((c) => c.name === "Todo")!.id;
++   const task = createTask(todoId, "Original", "keep this");
++   const updated = updateTask(task.id, "Changed", "keep this");
++   expect(updated.title).toBe("Changed");
++   expect(updated.description).toBe("keep this");
++ });
++
++test("deleteTask removes a task from the database", () => {
+   const columns = getAllColumns();
+   const todoId = columns.find((c) => c.name === "Todo")!.id;
+-  const task = createTask(todoId, "Original", "keep this");
+-  const updated = updateTask(task.id, "Changed", "keep this");
+-  expect(updated.title).toBe("Changed");
+-  expect(updated.description).toBe("keep this");
++  const task = createTask(todoId, "To Delete", "desc");
++  const result = deleteTask(task.id);
++  expect(result).toBe(true);
++  const tasks = getTasksByColumn(todoId);
++  expect(tasks).toHaveLength(0);
  });
 +
-+test("createTask adds a task to a column", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  const task = createTask(todoId, "Test Task", "Test description");
-+  expect(task.id).toBeGreaterThan(0);
-+  expect(task.title).toBe("Test Task");
-+  expect(task.description).toBe("Test description");
-+  expect(task.column_id).toBe(todoId);
++test("deleteTask returns false for non-existent task", () => {
++  const result = deleteTask(99999);
++  expect(result).toBe(false);
 +});
 +
-+test("createTask assigns incremental position", () => {
++test("deleteTask only deletes the specified task", () => {
 +  const columns = getAllColumns();
 +  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  const task1 = createTask(todoId, "Task 1", null);
-+  const task2 = createTask(todoId, "Task 2", null);
-+  expect(task2.position).toBeGreaterThan(task1.position);
-+});
-+
-+test("createTask handles null description", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  const task = createTask(todoId, "No Desc Task", null);
-+  expect(task.description).toBeNull();
-+});
-+
-+test("createTask returns task with timestamps", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  const task = createTask(todoId, "Timestamp Task", null);
-+  expect(task.created_at).toBeTruthy();
-+  expect(task.updated_at).toBeTruthy();
-+});
-+
-+test("createTask task is retrievable via getTasksByColumn", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  createTask(todoId, "Retrievable Task", "desc");
++  const task1 = createTask(todoId, "Keep", "desc1");
++  const task2 = createTask(todoId, "Delete", "desc2");
++  const task3 = createTask(todoId, "Keep Too", "desc3");
++  deleteTask(task2.id);
 +  const tasks = getTasksByColumn(todoId);
-+  expect(tasks).toHaveLength(1);
-+  expect(tasks[0]!.title).toBe("Retrievable Task");
++  expect(tasks).toHaveLength(2);
++  expect(tasks.map((t) => t.title)).toEqual(["Keep", "Keep Too"]);
 +});
 +
-+test("createTask tasks are ordered by position", () => {
++test("deleteTask removes task visible via getAllColumns", () => {
 +  const columns = getAllColumns();
 +  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  createTask(todoId, "C", null);
-+  createTask(todoId, "A", null);
-+  createTask(todoId, "B", null);
-+  const tasks = getTasksByColumn(todoId);
-+  expect(tasks.map((t) => t.title)).toEqual(["C", "A", "B"]);
++  createTask(todoId, "Will Delete", "desc");
++  expect(getTasksByColumn(todoId)).toHaveLength(1);
++  const taskToDelete = getTasksByColumn(todoId)[0]!;
++  deleteTask(taskToDelete.id);
++  expect(getTasksByColumn(todoId)).toHaveLength(0);
++});
++
++test("deleteTask does not affect tasks in other columns", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  const todoTask = createTask(todoId, "Todo Task", "desc");
++  createTask(doneId, "Done Task", "desc");
++  deleteTask(todoTask.id);
++  expect(getTasksByColumn(todoId)).toHaveLength(0);
++  expect(getTasksByColumn(doneId)).toHaveLength(1);
 +});
 
-[0m
-[0m$ [0mbun test src/db.test.ts
-bun test v1.3.11 (af24e281)
-
-src/db.test.ts:
-69 | 
-70 | test("createTask adds a task to a column", () => {
-71 |   const columns = getAllColumns();
-72 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-73 |   const task = createTask(todoId, "Test Task", "Test description");
-74 |   expect(task.id).toBeGreaterThan(0);
-              ^
-TypeError: null is not an object (evaluating 'task.id')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:74:10)
-(fail) createTask adds a task to a column [1.00ms]
-80 | test("createTask assigns incremental position", () => {
-81 |   const columns = getAllColumns();
-82 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-83 |   const task1 = createTask(todoId, "Task 1", null);
-84 |   const task2 = createTask(todoId, "Task 2", null);
-85 |   expect(task2.position).toBeGreaterThan(task1.position);
-              ^
-TypeError: null is not an object (evaluating 'task2.position')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:85:10)
-(fail) createTask assigns incremental position [1.00ms]
-87 | 
-88 | test("createTask handles null description", () => {
-89 |   const columns = getAllColumns();
-90 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-91 |   const task = createTask(todoId, "No Desc Task", null);
-92 |   expect(task.description).toBeNull();
-              ^
-TypeError: null is not an object (evaluating 'task.description')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:92:10)
-(fail) createTask handles null description
-94 | 
-95 | test("createTask returns task with timestamps", () => {
-96 |   const columns = getAllColumns();
-97 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-98 |   const task = createTask(todoId, "Timestamp Task", null);
-99 |   expect(task.created_at).toBeTruthy();
-              ^
-TypeError: null is not an object (evaluating 'task.created_at')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:99:10)
-(fail) createTask returns task with timestamps [1.00ms]
-
- 11 pass
- 4 fail
- 26 expect() calls
-Ran 15 tests across 1 file. [17.00ms]
-[0m
-[0m← [0mEdit src/db.ts
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -80,11 +80,12 @@
-   const stmt = db.prepare(
-     "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
-   );
-   const result = stmt.run(columnId, title, description, position);
-+  const insertedId = Number(result.lastInsertRowId);
-   const task = db
-     .prepare("SELECT * FROM tasks WHERE id = ?")
--    .get(result.lastInsertRowId) as Task;
-+    .get(insertedId) as Task;
-   return task;
- }
- 
- export function resetDb(): void {
-
-[0m
-The issue is `lastInsertRowId` returns a BigInt. Let me fix:
-[0m$ [0mbun test src/db.test.ts
-bun test v1.3.11 (af24e281)
-
-src/db.test.ts:
-69 | 
-70 | test("createTask adds a task to a column", () => {
-71 |   const columns = getAllColumns();
-72 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-73 |   const task = createTask(todoId, "Test Task", "Test description");
-74 |   expect(task.id).toBeGreaterThan(0);
-              ^
-TypeError: null is not an object (evaluating 'task.id')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:74:10)
-(fail) createTask adds a task to a column [1.00ms]
-80 | test("createTask assigns incremental position", () => {
-81 |   const columns = getAllColumns();
-82 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-83 |   const task1 = createTask(todoId, "Task 1", null);
-84 |   const task2 = createTask(todoId, "Task 2", null);
-85 |   expect(task2.position).toBeGreaterThan(task1.position);
-              ^
-TypeError: null is not an object (evaluating 'task2.position')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:85:10)
-(fail) createTask assigns incremental position [1.00ms]
-87 | 
-88 | test("createTask handles null description", () => {
-89 |   const columns = getAllColumns();
-90 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-91 |   const task = createTask(todoId, "No Desc Task", null);
-92 |   expect(task.description).toBeNull();
-              ^
-TypeError: null is not an object (evaluating 'task.description')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:92:10)
-(fail) createTask handles null description
-94 | 
-95 | test("createTask returns task with timestamps", () => {
-96 |   const columns = getAllColumns();
-97 |   const todoId = columns.find((c) => c.name === "Todo")!.id;
-98 |   const task = createTask(todoId, "Timestamp Task", null);
-99 |   expect(task.created_at).toBeTruthy();
-              ^
-TypeError: null is not an object (evaluating 'task.created_at')
-      at <anonymous> (/home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts:99:10)
-(fail) createTask returns task with timestamps
-
- 11 pass
- 4 fail
- 26 expect() calls
-Ran 15 tests across 1 file. [16.00ms]
-[0m
-[0m$ [0mbun -e "
-const { Database } = require('bun:sqlite');
-const db = new Database(':memory:');
-db.exec('CREATE TABLE test (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
-const result = db.prepare('INSERT INTO test (name) VALUES (?)').run('hello');
-console.log('result:', result);
-console.log('lastInsertRowId:', result.lastInsertRowId, typeof result.lastInsertRowId);
-console.log('Number:', Number(result.lastInsertRowId));
-const row = db.prepare('SELECT * FROM test WHERE id = ?').get(Number(result.lastInsertRowId));
-console.log('row:', row);
-"
-result: {
-  changes: 1,
-  lastInsertRowid: 1,
-}
-lastInsertRowId: undefined undefined
-Number: NaN
-row: null
-[0m
-The property is `lastInsertRowid` (lowercase `d`). Let me fix:
-[0m← [0mEdit src/db.ts
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -80,9 +80,9 @@
- const stmt = db.prepare(
-   "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
- );
- const result = stmt.run(columnId, title, description, position);
--const insertedId = Number(result.lastInsertRowId);
-+const insertedId = Number(result.lastInsertRowid);
- const task = db
-   .prepare("SELECT * FROM tasks WHERE id = ?")
-   .get(insertedId) as Task;
- return task;
-
-[0m
-[0m→ [0mRead src/db.ts
-[0m
-[0m$ [0mbun test src/db.test.ts
-bun test v1.3.11 (af24e281)
-
- 15 pass
- 0 fail
- 34 expect() calls
-Ran 15 tests across 1 file. [16.00ms]
 [0m
 [0m# [0mTodos
-[✓] Add createTask function to db.ts
-[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
-[✓] Add Add Task button + form modal to App.tsx
-[✓] Add markdown rendering for task descriptions
-[✓] Write unit tests
-[•] Run quality checks (test, typecheck)
+[✓] Add deleteTask() function to src/db.ts
+[✓] Add DELETE /api/tasks/:id endpoint to src/index.ts
+[✓] Add delete button + confirmation modal to App.tsx
+[✓] Write unit tests for deleteTask
+[•] Run quality checks (tests, typecheck)
 [ ] Commit, update PRD, update progress.txt
 [0m
-[0m$ [0mbunx tsc --noEmit
-tsconfig.json(24,5): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
-  Visit https://aka.ms/ts6 for migration information.
-[0m
-[0m$ [0mbunx tsc --noEmit --ignoreDeprecations 6.0 2>&1 || true
-src/App.tsx(3,10): error TS1484: 'ColumnWithTasks' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
-src/App.tsx(3,27): error TS1484: 'Task' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
-src/App.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './index.css'.
-src/db.ts(2,10): error TS1484: 'Column' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
-src/db.ts(2,18): error TS1484: 'Task' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
-[0m
-[0m← [0mEdit src/App.tsx
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -1,7 +1,7 @@
- import { useEffect, useState, useCallback } from "react";
- import { marked } from "marked";
--import { ColumnWithTasks, Task } from "./types";
-+import type { ColumnWithTasks, Task } from "./types";
- import "./index.css";
- 
- const renderer = new marked.Renderer();
- marked.setOptions({
-
-[0m
-[0m← [0mEdit src/db.ts
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -1,6 +1,6 @@
- import { Database } from "bun:sqlite";
--import { Column, Task } from "./types";
-+import type { Column, Task } from "./types";
- 
- const DB_PATH = process.env.DB_PATH || ":memory:";
- 
- let db: Database | null = null;
-
-[0m
-[0m→ [0mRead src/db.test.ts[90m [limit=5][0m
-[0m
-[0m$ [0mbunx tsc --noEmit --ignoreDeprecations 6.0 2>&1 || true
-src/App.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './index.css'.
-[0m
-[0m$ [0mbun test src/db.test.ts
+[0m$ [0mbun test
 bun test v1.3.11 (af24e281)
 
- 15 pass
+ 26 pass
  0 fail
- 34 expect() calls
-Ran 15 tests across 1 file. [15.00ms]
+ 54 expect() calls
+Ran 26 tests across 1 file. [21.00ms]
 [0m
-The only remaining error is the pre-existing CSS import issue (Bun handles it at runtime). Let me verify tests still pass:
-[0m# [0mTodos
-[✓] Add createTask function to db.ts
-[✓] Add POST /api/columns/:id/tasks endpoint to index.ts
-[✓] Add Add Task button + form modal to App.tsx
-[✓] Add markdown rendering for task descriptions
-[✓] Write unit tests
-[✓] Run quality checks (test, typecheck)
-[•] Commit, update PRD, update progress.txt
-[0m
-[0m$ [0mgit -C /home/pebra/Sync/Dev/ailab/trello13 add -A && git -C /home/pebra/Sync/Dev/ailab/trello13 commit -m "feat: [US-002] - Create New Task"
-[main 8f51abf] feat: [US-002] - Create New Task
- 8 files changed, 799 insertions(+), 348 deletions(-)
-[0m
-[0m← [0mEdit prd.json
-Index: /home/pebra/Sync/Dev/ailab/trello13/prd.json
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/prd.json
-+++ /home/pebra/Sync/Dev/ailab/trello13/prd.json
-@@ -37,9 +37,9 @@
-     "New task is saved to SQLite database",
-     "New task appears immediately in the column without page refresh",
-     "Form can be cancelled without creating a task"
-   ],
--  "passes": false
-+  "passes": true
- },
- {
-   "id": "US-003",
-   "title": "Edit Task",
-
-[0m
-[0m← [0mEdit progress.txt
-Index: /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-+++ /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-@@ -23,5 +23,24 @@
-   - Database uses in-memory storage by default; set `DB_PATH` env for persistence
-   - `resetDb()` is needed in tests to get a fresh database per test
-   - Bun.serve() routes use object syntax with GET/POST methods as keys
-   - Frontend uses `fetch()` to `/api/columns` - no React Query or SWR
-+- Bun SQLite `Result` uses `lastInsertRowid` (lowercase 'd'), not `lastInsertRowId`
-+- Use `import type` for type-only imports when `verbatimModuleSyntax` is enabled
- ---
-+
-+## Mon May 19 2026 - US-002
-+Thread: N/A
-+- Implemented `createTask()` in db.ts with auto-incrementing position per column
-+- Added POST `/api/columns/:id/tasks` endpoint with title validation
-+- Built inline Add Task form in each column with title/description fields
-+- Integrated `marked` library for markdown rendering in task descriptions
-+- Added prose CSS styles for rendered markdown content
-+- Wrote 7 unit tests for createTask covering: basic creation, position ordering, null description, timestamps, retrievability
-+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/index.css, src/db.test.ts, package.json, bun.lock
-+- **Learnings for future iterations:**
-+  - Bun SQLite `Result` object uses `lastInsertRowid` (lowercase 'd'), NOT `lastInsertRowId`
-+  - With `verbatimModuleSyntax`, type imports must use `import type` syntax
-+  - CSS side-effect imports (`import './index.css'`) cause TS errors but work at runtime with Bun
-+  - The `marked` library's `parse()` returns a string when called synchronously; use `{ async: false }` option
-+  - Form state uses inline pattern (show form in column's task list) rather than modal overlay
-+---
-
+[0m$ [0mbunx tsc --noEmit 2>&1 | head -30
+tsconfig.json(24,5): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
+  Visit https://aka.ms/ts6 for migration information.
 [0m
