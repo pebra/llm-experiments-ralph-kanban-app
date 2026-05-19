@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -117,4 +117,59 @@ test("createTask tasks are ordered by position", () => {
   createTask(todoId, "B", null);
   const tasks = getTasksByColumn(todoId);
   expect(tasks.map((t) => t.title)).toEqual(["C", "A", "B"]);
+});
+
+test("updateTask updates title and description", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Original Title", "Original desc");
+  const updated = updateTask(task.id, "New Title", "New description");
+  expect(updated.title).toBe("New Title");
+  expect(updated.description).toBe("New description");
+  expect(updated.id).toBe(task.id);
+});
+
+test("updateTask updates description to null", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Has Desc", "some description");
+  const updated = updateTask(task.id, "Has Desc", null);
+  expect(updated.description).toBeNull();
+});
+
+test("updateTask preserves column_id and position", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Task", "desc");
+  const updated = updateTask(task.id, "Updated", "new desc");
+  expect(updated.column_id).toBe(todoId);
+  expect(updated.position).toBe(task.position);
+});
+
+test("updateTask updates updated_at timestamp", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Task", "desc");
+  const originalUpdated = task.updated_at;
+  const updated = updateTask(task.id, "Updated", "new desc");
+  expect(updated.updated_at).toBeTruthy();
+});
+
+test("updateTask changes are visible via getTasksByColumn", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Before", "old");
+  updateTask(task.id, "After", "new");
+  const tasks = getTasksByColumn(todoId);
+  expect(tasks[0]!.title).toBe("After");
+  expect(tasks[0]!.description).toBe("new");
+});
+
+test("updateTask only updates title keeping description", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Original", "keep this");
+  const updated = updateTask(task.id, "Changed", "keep this");
+  expect(updated.title).toBe("Changed");
+  expect(updated.description).toBe("keep this");
 });

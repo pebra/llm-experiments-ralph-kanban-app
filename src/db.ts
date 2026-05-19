@@ -88,6 +88,21 @@ export function createTask(
   return task;
 }
 
+export function updateTask(
+  taskId: number,
+  title: string,
+  description: string | null,
+): Task {
+  const db = getDb();
+  db.prepare(
+    "UPDATE tasks SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+  ).run(title, description, taskId);
+  const task = db
+    .prepare("SELECT * FROM tasks WHERE id = ?")
+    .get(taskId) as Task;
+  return task;
+}
+
 export function resetDb(): void {
   db?.close();
   db = null;
