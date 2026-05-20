@@ -1,6 +1,7 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb } from "./db";
+import type { Task } from "./types";
 
 const server = serve({
   routes: {
@@ -51,6 +52,31 @@ const server = serve({
           return Response.json({ error: "Task not found" }, { status: 404 });
         }
         return new Response(null, { status: 204 });
+      },
+    },
+
+    "/api/tasks/:id/move": {
+      async PUT(req) {
+        const id = parseInt(req.params.id, 10);
+        const body = (await req.json()) as { targetColumnId: number; targetPosition?: number };
+        const db = getDb();
+        const existing = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as Task | undefined;
+        if (!existing) {
+          return Response.json({ error: "Task not found" }, { status: 404 });
+        }
+        let targetPosition: number;
+        if (body.targetPosition !== undefined) {
+          targetPosition = body.targetPosition;
+        } else {
+          const maxPos = db
+            .prepare(
+              "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
+            )
+            .get(body.targetColumnId) as { maxPos: number };
+          targetPosition = (maxPos?.maxPos ?? -1) + 1;
+        }
+        const task = moveTask(id, body.targetColumnId, targetPosition);
+        return Response.json(task);
       },
     },
   },

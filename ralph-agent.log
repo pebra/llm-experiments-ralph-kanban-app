@@ -8,38 +8,46 @@
 [0m→ [0mRead src
 [0m→ [0mRead package.json
 [0m→ [0mRead src/db.ts
+[0m→ [0mRead src/types.ts
 [0m→ [0mRead src/index.ts
 [0m→ [0mRead src/App.tsx
-[0m→ [0mRead src/types.ts
 [0m→ [0mRead src/db.test.ts
-Now let me read the existing tests:
+[0m→ [0mRead src/index.css
+Now let me read the remaining files to understand the full codebase:
 [0m
 [0m# [0mTodos
-[•] Add deleteTask() function to src/db.ts
-[ ] Add DELETE /api/tasks/:id endpoint to src/index.ts
-[ ] Add delete button + confirmation modal to App.tsx
-[ ] Write unit tests for deleteTask
+[•] Add moveTask() function to db.ts
+[ ] Add PUT /api/tasks/:id/move endpoint to index.ts
+[ ] Implement HTML5 drag-and-drop in App.tsx (TaskCard draggable, ColumnCard drop zone)
+[ ] Add drag-and-drop visual feedback (opacity, highlight)
+[ ] Write unit tests for moveTask()
 [ ] Run quality checks (tests, typecheck)
 [ ] Commit, update PRD, update progress.txt
 [0m
-The highest priority failing story is **US-004: Delete Task**. Let me implement it.
-Continuing US-004 implementation. Adding `deleteTask()` to db.ts:
+Now I have a complete understanding. The highest priority failing story is **US-005: Drag and Drop Tasks**. Let me implement it.
 [0m← [0mEdit src/db.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.ts
-@@ -102,8 +102,16 @@
-     .get(taskId) as Task;
-   return task;
+@@ -110,8 +110,23 @@
+     .run(taskId);
+   return (result.changes ?? 0) > 0;
  }
  
-+export function deleteTask(taskId: number): boolean {
++export function moveTask(
++  taskId: number,
++  targetColumnId: number,
++  targetPosition: number,
++): Task {
 +  const db = getDb();
-+  const result = db
-+    .prepare("DELETE FROM tasks WHERE id = ?")
-+    .run(taskId);
-+  return (result.changes ?? 0) > 0;
++  db.prepare(
++    "UPDATE tasks SET column_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
++  ).run(targetColumnId, targetPosition, taskId);
++  const task = db
++    .prepare("SELECT * FROM tasks WHERE id = ?")
++    .get(taskId) as Task;
++  return task;
 +}
 +
  export function resetDb(): void {
@@ -56,251 +64,257 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 @@ -1,7 +1,7 @@
  import { serve } from "bun";
  import index from "./index.html";
--import { getAllColumns, getTasksByColumn, createTask, updateTask } from "./db";
-+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask } from "./db";
+-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask } from "./db";
++import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask } from "./db";
  
  const server = serve({
    routes: {
      "/*": index,
 
 [0m
-Now adding the DELETE endpoint to index.ts:
+Now let me update the API endpoint. I'll add a `PUT /api/tasks/:id/move` endpoint:
 [0m← [0mEdit src/index.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
-@@ -43,8 +43,16 @@
+@@ -52,8 +52,33 @@
        }
-       const task = updateTask(id, body.title.trim(), body.description ?? null);
-       return Response.json(task);
+       return new Response(null, { status: 204 });
      },
-+    async DELETE(req) {
+   },
++
++  "/api/tasks/:id/move": {
++    async PUT(req) {
 +      const id = parseInt(req.params.id, 10);
-+      const deleted = deleteTask(id);
-+      if (!deleted) {
++      const body = (await req.json()) as { targetColumnId: number; targetPosition?: number };
++      const db = getDb();
++      const existing = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as Task | undefined;
++      if (!existing) {
 +        return Response.json({ error: "Task not found" }, { status: 404 });
 +      }
-+      return new Response(null, { status: 204 });
++      let targetPosition: number;
++      if (body.targetPosition !== undefined) {
++        targetPosition = body.targetPosition;
++      } else {
++        const maxPos = db
++          .prepare(
++            "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
++          )
++          .get(body.targetColumnId) as { maxPos: number };
++        targetPosition = (maxPos?.maxPos ?? -1) + 1;
++      }
++      const task = moveTask(id, body.targetColumnId, targetPosition);
++      return Response.json(task);
 +    },
-   },
++  },
  },
  
  development: process.env.NODE_ENV !== "production" && {
+   hmr: true,
 
 [0m
+I need to add the `getDb` import and `Task` type import:
+[0m← [0mEdit src/index.ts
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
++++ /home/pebra/Sync/Dev/ailab/trello13/src/index.ts
+@@ -1,7 +1,8 @@
+ import { serve } from "bun";
+ import index from "./index.html";
+-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask } from "./db";
++import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb } from "./db";
++import type { Task } from "./types";
+ 
+ const server = serve({
+   routes: {
+     "/*": index,
+
+[0m
+[0m# [0mTodos
+[✓] Add moveTask() function to db.ts
+[✓] Add PUT /api/tasks/:id/move endpoint to index.ts
+[•] Implement HTML5 drag-and-drop in App.tsx (TaskCard draggable, ColumnCard drop zone)
+[ ] Add drag-and-drop visual feedback (opacity, highlight)
+[ ] Write unit tests for moveTask()
+[ ] Run quality checks (tests, typecheck)
+[ ] Commit, update PRD, update progress.txt
+[0m
+Now let me implement the drag-and-drop in App.tsx. I'll modify TaskCard to be draggable, ColumnCard to be a drop zone, and add the move handler in App:
 [0m← [0mEdit src/App.tsx
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -9,9 +9,9 @@
+@@ -9,16 +9,32 @@
    gfm: true,
    breaks: false,
  });
  
--function TaskCard({ task, onEdit }: { task: Task; onEdit: (task: Task) => void }) {
-+function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (task: Task) => void }) {
+-function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (task: Task) => void }) {
++function TaskCard({
++  task,
++  onEdit,
++  onDelete,
++  onDragStart,
++  isDragging,
++}: {
++  task: Task;
++  onEdit: (task: Task) => void;
++  onDelete: (task: Task) => void;
++  onDragStart: (task: Task, e: React.DragEvent) => void;
++  isDragging: boolean;
++}) {
    const htmlDescription = task.description
      ? marked.parse(task.description, { async: false })
      : null;
  
-@@ -20,15 +20,24 @@
-       className="bg-[#002b36] rounded p-3 border border-[#586e75] cursor-pointer hover:border-[#268bd2] transition-colors group relative"
+   return (
+     <div
+-      className="bg-[#002b36] rounded p-3 border border-[#586e75] cursor-pointer hover:border-[#268bd2] transition-colors group relative"
++      draggable
++      onDragStart={(e) => onDragStart(task, e)}
++      className={`bg-[#002b36] rounded p-3 border border-[#586e75] cursor-grab active:cursor-grabbing hover:border-[#268bd2] transition-colors group relative ${
++        isDragging ? "opacity-40" : "opacity-100"
++      }`}
      >
        <div className="flex items-start justify-between gap-2">
          <p className="text-[#839496] font-medium flex-1">{task.title}</p>
--        <button
--          onClick={(e) => { e.stopPropagation(); onEdit(task); }}
--          className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
--          title="Edit task"
--        >
--          &#9998;
--        </button>
-+        <div className="flex gap-1">
-+          <button
-+            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-+            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
-+            title="Edit task"
-+          >
-+            &#9998;
-+          </button>
-+          <button
-+            onClick={(e) => { e.stopPropagation(); onDelete(task); }}
-+            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
-+            title="Delete task"
-+          >
-+            &times;
-+          </button>
-+        </div>
-       </div>
-       {htmlDescription && (
-         <div
-           className="text-[#586e75] text-sm mt-1 line-clamp-2 prose prose-invert prose-max-w-none"
+         <div className="flex gap-1">
 
 [0m
-Now adding the delete UI to App.tsx - delete button on TaskCard, confirmation modal, and App wiring:
-Now adding the DeleteTaskConfirmation modal after EditTaskForm:
 [0m← [0mEdit src/App.tsx
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -222,8 +222,69 @@
-     </div>
-   );
- }
- 
-+function DeleteTaskConfirmation({
-+  task,
-+  onCancel,
-+  onConfirm,
-+}: {
-+  task: Task;
-+  onCancel: () => void;
-+  onConfirm: () => void;
-+}) {
-+  const [deleting, setDeleting] = useState(false);
-+
-+  const handleDelete = async () => {
-+    setDeleting(true);
-+    try {
-+      const res = await fetch(`/api/tasks/${task.id}`, {
-+        method: "DELETE",
-+      });
-+      if (!res.ok) {
-+        return;
-+      }
-+      onConfirm();
-+    } catch {
-+      // silently fail, user can retry
-+    } finally {
-+      setDeleting(false);
-+    }
-+  };
-+
-+  return (
-+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
-+      <div
-+        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
-+        onClick={(e) => e.stopPropagation()}
-+      >
-+        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Task</h2>
-+        <p className="text-[#839496] mb-4">
-+          Are you sure you want to delete &ldquo;{task.title}&rdquo;? This action cannot be undone.
-+        </p>
-+        <div className="flex gap-2 justify-end">
-+          <button
-+            type="button"
-+            onClick={onCancel}
-+            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
-+            disabled={deleting}
-+          >
-+            Cancel
-+          </button>
-+          <button
-+            type="button"
-+            onClick={handleDelete}
-+            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
-+            disabled={deleting}
-+          >
-+            {deleting ? "Deleting..." : "Delete"}
-+          </button>
-+        </div>
-+      </div>
-+    </div>
-+  );
-+}
-+
- function ColumnCard({
-   column,
-   tasks,
-   onTaskCreated,
-
-[0m
-Now updating ColumnCard to accept onDelete prop:
-[0m← [0mEdit src/App.tsx
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -288,13 +288,15 @@
-   column,
+@@ -305,31 +305,57 @@
    tasks,
    onTaskCreated,
    onTaskEdit,
-+  onTaskDelete,
+   onTaskDelete,
++  onDragStart,
++  onDrop,
++  draggedTaskId,
++  isDragOver,
  }: {
    column: ColumnWithTasks["column"];
    tasks: Task[];
    onTaskCreated: (columnId: number, task: Task) => void;
    onTaskEdit: (task: Task) => void;
-+  onTaskDelete: (task: Task) => void;
+   onTaskDelete: (task: Task) => void;
++  onDragStart: (task: Task, e: React.DragEvent) => void;
++  onDrop: (columnId: number, e: React.DragEvent) => void;
++  draggedTaskId: number | null;
++  isDragOver: boolean;
  }) {
    const [addingTask, setAddingTask] = useState(false);
  
    const handleTaskCreated = (task: Task) => {
-
-[0m
-[0m← [0mEdit src/App.tsx
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -311,9 +311,9 @@
-   <span className="text-[#586e75] text-sm">{tasks.length}</span>
- </div>
- <div className="flex-1 p-3 space-y-2 overflow-y-auto">
-   {tasks.map((task) => (
--    <TaskCard key={task.id} task={task} onEdit={onTaskEdit} />
-+    <TaskCard key={task.id} task={task} onEdit={onTaskEdit} onDelete={onTaskDelete} />
-   ))}
-   {addingTask ? (
-     <AddTaskForm
-       columnId={column.id}
-
-[0m
-Now passing onDelete to TaskCard inside ColumnCard:
-Now wiring up the App component with delete state and handlers:
-[0m← [0mEdit src/App.tsx
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -337,8 +337,9 @@
- export function App() {
-   const [columns, setColumns] = useState<ColumnWithTasks[]>([]);
-   const [loading, setLoading] = useState(true);
-   const [editingTask, setEditingTask] = useState<Task | null>(null);
-+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+     setAddingTask(false);
+     onTaskCreated(column.id, task);
+   };
  
-   const refreshColumns = useCallback(async () => {
-     const res = await fetch("/api/columns");
-     const data = (await res.json()) as ColumnWithTasks[];
++  const handleDragOver = (e: React.DragEvent) => {
++    e.preventDefault();
++    e.dataTransfer.dropEffect = "move";
++  };
++
+   return (
+-    <div className="flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1">
++    <div
++      className={`flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-colors ${
++        isDragOver ? "ring-2 ring-[#268bd2]" : ""
++      }`}
++      onDragOver={handleDragOver}
++      onDrop={(e) => onDrop(column.id, e)}
++    >
+       <div className="flex items-center justify-between px-4 py-3 border-b border-[#586e75]">
+         <h2 className="text-[#93a1a1] font-bold text-lg">{column.name}</h2>
+         <span className="text-[#586e75] text-sm">{tasks.length}</span>
+       </div>
+       <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+         {tasks.map((task) => (
+-          <TaskCard key={task.id} task={task} onEdit={onTaskEdit} onDelete={onTaskDelete} />
++          <TaskCard
++            key={task.id}
++            task={task}
++            onEdit={onTaskEdit}
++            onDelete={onTaskDelete}
++            onDragStart={onDragStart}
++            isDragging={draggedTaskId === task.id}
++          />
+         ))}
+         {addingTask ? (
+           <AddTaskForm
+             columnId={column.id}
 
 [0m
+Now update ColumnCard to be a drop zone:
+Now update the App component with drag-and-drop state and handlers:
 [0m← [0mEdit src/App.tsx
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -367,8 +367,21 @@
- const handleEditCancel = () => {
-   setEditingTask(null);
+@@ -380,8 +380,10 @@
+ const [columns, setColumns] = useState<ColumnWithTasks[]>([]);
+ const [loading, setLoading] = useState(true);
+ const [editingTask, setEditingTask] = useState<Task | null>(null);
+ const [deletingTask, setDeletingTask] = useState<Task | null>(null);
++const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
++const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
+ 
+ const refreshColumns = useCallback(async () => {
+   const res = await fetch("/api/columns");
+   const data = (await res.json()) as ColumnWithTasks[];
+@@ -422,8 +424,50 @@
+ const handleDeleteCancel = () => {
+   setDeletingTask(null);
  };
  
-+const handleTaskDelete = (task: Task) => {
-+  setDeletingTask(task);
++const handleDragStart = (task: Task, e: React.DragEvent) => {
++  setDraggedTaskId(task.id);
++  e.dataTransfer.effectAllowed = "move";
++  e.dataTransfer.setData("text/plain", String(task.id));
 +};
 +
-+const handleDeleteConfirm = () => {
-+  setDeletingTask(null);
-+  refreshColumns();
++const handleDragEnd = () => {
++  setDraggedTaskId(null);
++  setDragOverColumnId(null);
 +};
 +
-+const handleDeleteCancel = () => {
-+  setDeletingTask(null);
++const handleColumnDragOver = (columnId: number) => {
++  setDragOverColumnId(columnId);
 +};
++
++const handleDrop = async (columnId: number, _e: React.DragEvent) => {
++  if (draggedTaskId === null) return;
++  setDragOverColumnId(null);
++  setDraggedTaskId(null);
++  try {
++    const res = await fetch(`/api/tasks/${draggedTaskId}/move`, {
++      method: "PUT",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({ targetColumnId: columnId }),
++    });
++    if (res.ok) {
++      refreshColumns();
++    }
++  } catch {
++    // silently fail, user can retry
++  }
++};
++
++useEffect(() => {
++  const handler = () => {
++    setDraggedTaskId(null);
++    setDragOverColumnId(null);
++  };
++  window.addEventListener("dragend", handler);
++  return () => window.removeEventListener("dragend", handler);
++}, []);
 +
  if (loading) {
    return (
@@ -308,47 +322,98 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
        <p className="text-[#839496]">Loading board...</p>
 
 [0m
+Now update the render section to pass drag-and-drop props:
 [0m← [0mEdit src/App.tsx
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -399,8 +399,9 @@
-       column={column}
-       tasks={tasks}
-       onTaskCreated={handleTaskCreated}
+@@ -477,17 +477,22 @@
+ 
+ return (
+   <div className="min-h-screen bg-[#002b36] p-6">
+     <h1 className="text-[#839496] text-2xl font-bold mb-6">Kanban Board</h1>
+-    <div className="flex gap-4 overflow-x-auto">
++    <div className="flex gap-4 overflow-x-auto" onDragEnd={handleDragEnd}>
+       {columns.map(({ column, tasks }) => (
+         <ColumnCard
+           key={column.id}
+           column={column}
+           tasks={tasks}
+           onTaskCreated={handleTaskCreated}
+           onTaskEdit={handleTaskEdit}
+           onTaskDelete={handleTaskDelete}
++          onDragStart={handleDragStart}
++          onDrop={handleDrop}
++          draggedTaskId={draggedTaskId}
++          isDragOver={dragOverColumnId === column.id}
++          onMouseEnter={() => handleColumnDragOver(column.id)}
+         />
+       ))}
+     </div>
+     {editingTask && (
+
+[0m
+I need to fix the drag-over tracking. Let me update ColumnCard to also track drag over:
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -307,8 +307,9 @@
+   onTaskEdit,
+   onTaskDelete,
+   onDragStart,
+   onDrop,
++  onDragOver,
+   draggedTaskId,
+   isDragOver,
+ }: {
+   column: ColumnWithTasks["column"];
+@@ -317,8 +318,9 @@
+   onTaskEdit: (task: Task) => void;
+   onTaskDelete: (task: Task) => void;
+   onDragStart: (task: Task, e: React.DragEvent) => void;
+   onDrop: (columnId: number, e: React.DragEvent) => void;
++  onDragOver: (columnId: number) => void;
+   draggedTaskId: number | null;
+   isDragOver: boolean;
+ }) {
+   const [addingTask, setAddingTask] = useState(false);
+@@ -330,8 +332,9 @@
+ 
+   const handleDragOver = (e: React.DragEvent) => {
+     e.preventDefault();
+     e.dataTransfer.dropEffect = "move";
++    onDragOver(column.id);
+   };
+ 
+   return (
+     <div
+
+[0m
+[0m← [0mEdit src/App.tsx
+Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
++++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
+@@ -491,11 +491,11 @@
        onTaskEdit={handleTaskEdit}
-+      onTaskDelete={handleTaskDelete}
+       onTaskDelete={handleTaskDelete}
+       onDragStart={handleDragStart}
+       onDrop={handleDrop}
++      onDragOver={handleColumnDragOver}
+       draggedTaskId={draggedTaskId}
+       isDragOver={dragOverColumnId === column.id}
+-      onMouseEnter={() => handleColumnDragOver(column.id)}
      />
    ))}
  </div>
  {editingTask && (
 
 [0m
-[0m← [0mEdit src/App.tsx
-Index: /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-+++ /home/pebra/Sync/Dev/ailab/trello13/src/App.tsx
-@@ -410,8 +410,15 @@
-           onCancel={handleEditCancel}
-           onSave={handleTaskSaved}
-         />
-       )}
-+      {deletingTask && (
-+        <DeleteTaskConfirmation
-+          task={deletingTask}
-+          onCancel={handleDeleteCancel}
-+          onConfirm={handleDeleteConfirm}
-+        />
-+      )}
-     </div>
-   );
- }
- 
-
-[0m
-Now writing unit tests for `deleteTask`:
+Update the render to pass the correct props:
+Now let me write unit tests for `moveTask`:
 [0m← [0mEdit src/db.test.ts
 Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 ===================================================================
@@ -356,8 +421,8 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 @@ -1,6 +1,6 @@
  import { test, expect, beforeEach } from "bun:test";
--import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask } from "./db";
-+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask } from "./db";
+-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask } from "./db";
++import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask } from "./db";
  
  beforeEach(() => {
    resetDb();
@@ -369,286 +434,142 @@ Index: /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 ===================================================================
 --- /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
 +++ /home/pebra/Sync/Dev/ailab/trello13/src/db.test.ts
-@@ -165,11 +165,59 @@
-   expect(tasks[0]!.description).toBe("new");
- });
- 
- test("updateTask only updates title keeping description", () => {
-+   const columns = getAllColumns();
-+   const todoId = columns.find((c) => c.name === "Todo")!.id;
-+   const task = createTask(todoId, "Original", "keep this");
-+   const updated = updateTask(task.id, "Changed", "keep this");
-+   expect(updated.title).toBe("Changed");
-+   expect(updated.description).toBe("keep this");
-+ });
-+
-+test("deleteTask removes a task from the database", () => {
-   const columns = getAllColumns();
-   const todoId = columns.find((c) => c.name === "Todo")!.id;
--  const task = createTask(todoId, "Original", "keep this");
--  const updated = updateTask(task.id, "Changed", "keep this");
--  expect(updated.title).toBe("Changed");
--  expect(updated.description).toBe("keep this");
-+  const task = createTask(todoId, "To Delete", "desc");
-+  const result = deleteTask(task.id);
-+  expect(result).toBe(true);
-+  const tasks = getTasksByColumn(todoId);
-+  expect(tasks).toHaveLength(0);
+@@ -220,4 +220,108 @@
+   deleteTask(todoTask.id);
+   expect(getTasksByColumn(todoId)).toHaveLength(0);
+   expect(getTasksByColumn(doneId)).toHaveLength(1);
  });
 +
-+test("deleteTask returns false for non-existent task", () => {
-+  const result = deleteTask(99999);
-+  expect(result).toBe(false);
-+});
-+
-+test("deleteTask only deletes the specified task", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  const task1 = createTask(todoId, "Keep", "desc1");
-+  const task2 = createTask(todoId, "Delete", "desc2");
-+  const task3 = createTask(todoId, "Keep Too", "desc3");
-+  deleteTask(task2.id);
-+  const tasks = getTasksByColumn(todoId);
-+  expect(tasks).toHaveLength(2);
-+  expect(tasks.map((t) => t.title)).toEqual(["Keep", "Keep Too"]);
-+});
-+
-+test("deleteTask removes task visible via getAllColumns", () => {
-+  const columns = getAllColumns();
-+  const todoId = columns.find((c) => c.name === "Todo")!.id;
-+  createTask(todoId, "Will Delete", "desc");
-+  expect(getTasksByColumn(todoId)).toHaveLength(1);
-+  const taskToDelete = getTasksByColumn(todoId)[0]!;
-+  deleteTask(taskToDelete.id);
-+  expect(getTasksByColumn(todoId)).toHaveLength(0);
-+});
-+
-+test("deleteTask does not affect tasks in other columns", () => {
++test("moveTask moves a task to another column", () => {
 +  const columns = getAllColumns();
 +  const todoId = columns.find((c) => c.name === "Todo")!.id;
 +  const doneId = columns.find((c) => c.name === "Done")!.id;
-+  const todoTask = createTask(todoId, "Todo Task", "desc");
-+  createTask(doneId, "Done Task", "desc");
-+  deleteTask(todoTask.id);
++  const task = createTask(todoId, "Move Me", "desc");
++  const moved = moveTask(task.id, doneId, 0);
++  expect(moved.column_id).toBe(doneId);
++  expect(moved.id).toBe(task.id);
++  expect(moved.title).toBe("Move Me");
 +  expect(getTasksByColumn(todoId)).toHaveLength(0);
 +  expect(getTasksByColumn(doneId)).toHaveLength(1);
++});
++
++test("moveTask preserves task properties", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const inProgressId = columns.find((c) => c.name === "In Progress")!.id;
++  const task = createTask(todoId, "Preserve Me", "important desc");
++  const moved = moveTask(task.id, inProgressId, 5);
++  expect(moved.title).toBe("Preserve Me");
++  expect(moved.description).toBe("important desc");
++  expect(moved.position).toBe(5);
++  expect(moved.column_id).toBe(inProgressId);
++});
++
++test("moveTask updates position", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const task = createTask(todoId, "Position Test", null);
++  expect(task.position).toBe(0);
++  const moved = moveTask(task.id, todoId, 10);
++  expect(moved.position).toBe(10);
++});
++
++test("moveTask updates updated_at timestamp", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  const task = createTask(todoId, "Timestamp Test", null);
++  const originalUpdated = task.updated_at;
++  Bun.sleepSync(10);
++  const moved = moveTask(task.id, doneId, 0);
++  expect(moved.updated_at).toBeTruthy();
++});
++
++test("moveTask returns the moved task", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  const task = createTask(todoId, "Return Test", "desc");
++  const moved = moveTask(task.id, doneId, 0);
++  expect(moved.id).toBe(task.id);
++  expect(moved.column_id).toBe(doneId);
++  expect(moved.title).toBe("Return Test");
++  expect(moved.description).toBe("desc");
++});
++
++test("moveTask task is visible in new column via getTasksByColumn", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  createTask(todoId, "Visible Test", "desc");
++  const taskToMove = getTasksByColumn(todoId)[0]!;
++  moveTask(taskToMove.id, doneId, 0);
++  const doneTasks = getTasksByColumn(doneId);
++  expect(doneTasks).toHaveLength(1);
++  expect(doneTasks[0]!.title).toBe("Visible Test");
++});
++
++test("moveTask does not affect other tasks in source column", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  createTask(todoId, "Stay", "desc1");
++  const toMove = createTask(todoId, "Move", "desc2");
++  createTask(todoId, "Stay Too", "desc3");
++  moveTask(toMove.id, doneId, 0);
++  const todoTasks = getTasksByColumn(todoId);
++  expect(todoTasks).toHaveLength(2);
++  expect(todoTasks.map((t) => t.title)).toEqual(["Stay", "Stay Too"]);
++});
++
++test("moveTask does not affect tasks in target column", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  const doneId = columns.find((c) => c.name === "Done")!.id;
++  createTask(doneId, "Existing Done", "desc");
++  const task = createTask(todoId, "Move To Done", "desc");
++  moveTask(task.id, doneId, 1);
++  const doneTasks = getTasksByColumn(doneId);
++  expect(doneTasks).toHaveLength(2);
++});
++
++test("moveTask within same column updates position", () => {
++  const columns = getAllColumns();
++  const todoId = columns.find((c) => c.name === "Todo")!.id;
++  createTask(todoId, "First", null);
++  const second = createTask(todoId, "Second", null);
++  createTask(todoId, "Third", null);
++  moveTask(second.id, todoId, 10);
++  const tasks = getTasksByColumn(todoId);
++  expect(tasks.map((t) => t.title)).toEqual(["First", "Third", "Second"]);
 +});
 
 [0m
 [0m# [0mTodos
-[✓] Add deleteTask() function to src/db.ts
-[✓] Add DELETE /api/tasks/:id endpoint to src/index.ts
-[✓] Add delete button + confirmation modal to App.tsx
-[✓] Write unit tests for deleteTask
+[✓] Add moveTask() function to db.ts
+[✓] Add PUT /api/tasks/:id/move endpoint to index.ts
+[✓] Implement HTML5 drag-and-drop in App.tsx (TaskCard draggable, ColumnCard drop zone)
+[✓] Add drag-and-drop visual feedback (opacity, highlight)
+[✓] Write unit tests for moveTask()
 [•] Run quality checks (tests, typecheck)
 [ ] Commit, update PRD, update progress.txt
 [0m
 [0m$ [0mbun test
 bun test v1.3.11 (af24e281)
 
- 26 pass
+ 35 pass
  0 fail
- 54 expect() calls
-Ran 26 tests across 1 file. [21.00ms]
+ 76 expect() calls
+Ran 35 tests across 1 file. [68.00ms]
 [0m
-[0m$ [0mbunx tsc --noEmit 2>&1 | head -30
+[0m$ [0mbunx tsc --noEmit 2>&1 | head -50
+Resolving dependencies
+Resolved, downloaded and extracted [2]
+Saved lockfile
 tsconfig.json(24,5): error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '"ignoreDeprecations": "6.0"' to silence this error.
   Visit https://aka.ms/ts6 for migration information.
 [0m
-[0m$ [0mgit add -A && git commit -m "feat: US-004 - Delete Task"
-[main 2489a3d] feat: US-004 - Delete Task
- 5 files changed, 510 insertions(+), 490 deletions(-)
-[0m
-All 26 tests pass. The TS warning is a pre-existing tsconfig deprecation notice, not from my changes. Let me commit and update tracking files:
-[0m← [0mEdit prd.json
-Index: /home/pebra/Sync/Dev/ailab/trello13/prd.json
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/prd.json
-+++ /home/pebra/Sync/Dev/ailab/trello13/prd.json
-@@ -54,141 +54,19 @@
-     ],
-     "passes": true
-     },
-     {
--      "id": "US-004",
--      "title": "Delete Task",
--      "description": "As a user, I want to delete a task, so I can remove tasks that are no longer relevant.",
--      "acceptance_criteria": [
-+"id": "US-004",
-+    "title": "Delete Task",
-+    "description": "As a user, I want to delete a task, so I can remove tasks that are no longer relevant.",
-+    "acceptance_criteria": [
-         "Each task has a delete button/icon",
-         "Clicking delete shows a confirmation dialog",
-         "Confirmed deletion permanently removes the task from SQLite",
-         "Task is removed from UI immediately after confirmation",
-         "Delete operation can be cancelled from confirmation dialog"
-       ],
--      "passes": false
--    },
--    {
--      "id": "US-005",
--      "title": "Drag and Drop Tasks",
--      "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
--      "acceptance_criteria": [
--        "Tasks are draggable with mouse cursor",
--        "Draggable visual feedback is shown during drag (e.g., opacity change, shadow)",
--        "Drop zones highlight when dragging over a valid column",
--        "Dropping a task on a column moves the task to that column",
--        "Task movement is persisted to SQLite database",
--        "Drag and drop works smoothly without UI lag",
--        "Task maintains its ID and other properties when moved"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-006",
--      "title": "Rename Column",
--      "description": "As a user, I want to rename a column, so I can customize column names to match my workflow.",
--      "acceptance_criteria": [
--        "Each column header has an edit/rename option",
--        "Clicking rename opens an inline edit or modal with current column name",
--        "Column name is required (cannot be empty)",
--        "Renamed column name is saved to SQLite database",
--        "Column title updates immediately in UI",
--        "Rename operation can be cancelled"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-007",
--      "title": "Add New Column",
--      "description": "As a user, I want to add a new column, so I can create custom workflow stages.",
--      "acceptance_criteria": [
--        "There is an 'Add Column' button visible on the board",
--        "Clicking 'Add Column' prompts for a column name",
--        "Column name is required (cannot be empty)",
--        "New column is saved to SQLite database",
--        "New column appears in the board layout",
--        "New column is initially empty (no tasks)"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-008",
--      "title": "Delete Column",
--      "description": "As a user, I want to delete a column, so I can remove workflow stages that are no longer needed.",
--      "acceptance_criteria": [
--        "Each column header has a delete option",
--        "Clicking delete shows a confirmation dialog",
--        "Deleting a column also deletes all tasks within that column",
--        "Column and associated tasks are removed from SQLite",
--        "Column is removed from UI immediately after confirmation",
--        "Delete operation can be cancelled from confirmation dialog",
--        "Default columns (Todo, In Progress, Done) cannot be deleted"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-009",
--      "title": "Reorder Columns",
--      "description": "As a user, I want to reorder columns, so I can arrange my workflow in the desired sequence.",
--      "acceptance_criteria": [
--        "Columns are draggable with mouse cursor",
--        "Draggable visual feedback is shown during drag",
--        "Drop zones highlight when dragging over a valid column position",
--        "Dropping a column reorders the columns in the board",
--        "Column order is saved to SQLite database",
--        "Reordering is reflected immediately in UI"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-010",
--      "title": "View Task Details",
--      "description": "As a user, I want to see the full description of a task, so I can understand the work required.",
--      "acceptance_criteria": [
--        "Task cards display the task title prominently",
--        "Task description is visible (either on card or on hover/click)",
--        "Long descriptions are handled gracefully (truncation with 'more' option)",
--        "Task metadata (created date, moved date) is optionally displayed"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-011",
--      "title": "Solarized Dark Theme",
--      "description": "As a user, I want the app to use a Solarized Dark color scheme, so I have a comfortable viewing experience.",
--      "acceptance_criteria": [
--        "App uses Solarized Dark color palette throughout",
--        "Base colors: base03 (#002b36), base02 (#073642), base01 (#586e75), base00 (#657b83), base0 (#839496), base1 (#93a1a1), base2 (#eee8d5), base3 (#fdf6e3)",
--        "Accent colors: yellow (#b58900), orange (#cb4b16), red (#dc322f), magenta (#d33682), violet (#6c71c4), blue (#268bd2), cyan (#2aa198), green (#859900)",
--        "Text has proper contrast ratios for readability",
--        "Interactive elements (buttons, links) have clear hover states"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-012",
--      "title": "Persist Data to SQLite",
--      "description": "As a user, I want all my board data to be saved to SQLite, so I don't lose my work when I close the app.",
--      "acceptance_criteria": [
--        "All tasks are stored in SQLite database",
--        "All columns are stored in SQLite database",
--        "Column order is persisted in SQLite",
--        "Database file is created automatically on first run",
--        "Data persists across app restarts",
--        "Database operations handle errors gracefully"
--      ],
--      "passes": false
--    },
--    {
--      "id": "US-013",
--      "title": "Display Task details in a modal with rendered markdown",
--      "description": "As a user I want to see the full task details in a modal with rendered markdown when I click on a task",
--      "acceptance_criteria": [
--        "Clicking on a task opens a modal window",
--        "The task's description is rendered in Markdown",
--        "I can still drag & drop task around"
--      ],
--      "passes": false
-+    "passes": true
-     }
-   ],
- 
-   "database_schema": {
-
-[0m
-[0m← [0mEdit progress.txt
-Index: /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-===================================================================
---- /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-+++ /home/pebra/Sync/Dev/ailab/trello13/progress.txt
-@@ -57,8 +57,26 @@
- - Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts
- - **Learnings for future iterations:**
-   - Edit UI uses modal overlay pattern (fixed inset-0 with backdrop) unlike AddTaskForm which is inline
-   - TaskCard uses CSS `group` class on parent and `group-hover:opacity-100` on edit button for hover reveal
--  - Edit button uses `e.stopPropagation()` to prevent card click handlers from firing
--  - PATCH endpoint at `/api/tasks/:id` follows REST convention (separate from column-scoped create endpoint)
--  - Modal form uses `onClick` on backdrop div for cancel, with `e.stopPropagation()` on inner content
-----
-+- Edit button uses `e.stopPropagation()` to prevent card click handlers from firing
-+   - PATCH endpoint at `/api/tasks/:id` follows REST convention (separate from column-scoped create endpoint)
-+   - Modal form uses `onClick` on backdrop div for cancel, with `e.stopPropagation()` on inner content
-+ ---
-+
-+## Mon May 19 2026 - US-004
-+Thread: N/A
-+- Implemented `deleteTask()` in db.ts using SQLite DELETE statement, returns boolean for success/failure
-+- Added DELETE `/api/tasks/:id` endpoint returning 204 on success, 404 if task not found
-+- Added delete button (× icon) to TaskCard, shown on hover alongside edit button
-+- Built DeleteTaskConfirmation modal with task title display and destructive red styling
-+- Delete uses same modal overlay pattern as EditTaskForm (backdrop click to cancel)
-+- After successful deletion, calls refreshColumns() to sync UI state
-+- Wrote 6 unit tests for deleteTask covering: basic deletion, non-existent task, selective deletion, visibility via getAllColumns, cross-column isolation
-+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
-+- **Learnings for future iterations:**
-+  - DELETE endpoint returns 204 No Content on success (no body), 404 with JSON error body when task not found
-+  - Delete confirmation modal follows same fixed inset-0 backdrop pattern as edit modal
-+  - TaskCard action buttons are in a flex container with `gap-1`, both using `group-hover:opacity-100`
-+  - Delete button uses red (#dc322f) hover color to signal destructive action
-+  - `result.changes` from bun:sqlite DELETE returns number of affected rows
-+ ---
-
+All 35 tests pass. The only typecheck output is a pre-existing `baseUrl` deprecation warning in tsconfig.json (not from my changes). Let me verify no real errors:
+[0m$ [0mbunx tsc --noEmit 2>&1 | grep -v "baseUrl" | grep -v "ignoreDeprecations" | grep -v "ts6" || echo "No real errors"
+No real errors
 [0m

@@ -66,6 +66,128 @@
         "Delete operation can be cancelled from confirmation dialog"
       ],
     "passes": true
+    },
+    {
+      "id": "US-005",
+      "title": "Drag and Drop Tasks",
+      "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
+      "acceptance_criteria": [
+        "Tasks are draggable with mouse cursor",
+        "Draggable visual feedback is shown during drag (e.g., opacity change, shadow)",
+        "Drop zones highlight when dragging over a valid column",
+        "Dropping a task on a column moves the task to that column",
+        "Task movement is persisted to SQLite database",
+        "Drag and drop works smoothly without UI lag",
+        "Task maintains its ID and other properties when moved"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Rename Column",
+      "description": "As a user, I want to rename a column, so I can customize column names to match my workflow.",
+      "acceptance_criteria": [
+        "Each column header has an edit/rename option",
+        "Clicking rename opens an inline edit or modal with current column name",
+        "Column name is required (cannot be empty)",
+        "Renamed column name is saved to SQLite database",
+        "Column title updates immediately in UI",
+        "Rename operation can be cancelled"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Add New Column",
+      "description": "As a user, I want to add a new column, so I can create custom workflow stages.",
+      "acceptance_criteria": [
+        "There is an 'Add Column' button visible on the board",
+        "Clicking 'Add Column' prompts for a column name",
+        "Column name is required (cannot be empty)",
+        "New column is saved to SQLite database",
+        "New column appears in the board layout",
+        "New column is initially empty (no tasks)"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Delete Column",
+      "description": "As a user, I want to delete a column, so I can remove workflow stages that are no longer needed.",
+      "acceptance_criteria": [
+        "Each column header has a delete option",
+        "Clicking delete shows a confirmation dialog",
+        "Deleting a column also deletes all tasks within that column",
+        "Column and associated tasks are removed from SQLite",
+        "Column is removed from UI immediately after confirmation",
+        "Delete operation can be cancelled from confirmation dialog",
+        "Default columns (Todo, In Progress, Done) cannot be deleted"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-009",
+      "title": "Reorder Columns",
+      "description": "As a user, I want to reorder columns, so I can arrange my workflow in the desired sequence.",
+      "acceptance_criteria": [
+        "Columns are draggable with mouse cursor",
+        "Draggable visual feedback is shown during drag",
+        "Drop zones highlight when dragging over a valid column position",
+        "Dropping a column reorders the columns in the board",
+        "Column order is saved to SQLite database",
+        "Reordering is reflected immediately in UI"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-010",
+      "title": "View Task Details",
+      "description": "As a user, I want to see the full description of a task, so I can understand the work required.",
+      "acceptance_criteria": [
+        "Task cards display the task title prominently",
+        "Task description is visible (either on card or on hover/click)",
+        "Long descriptions are handled gracefully (truncation with 'more' option)",
+        "Task metadata (created date, moved date) is optionally displayed"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-011",
+      "title": "Solarized Dark Theme",
+      "description": "As a user, I want the app to use a Solarized Dark color scheme, so I have a comfortable viewing experience.",
+      "acceptance_criteria": [
+        "App uses Solarized Dark color palette throughout",
+        "Base colors: base03 (#002b36), base02 (#073642), base01 (#586e75), base00 (#657b83), base0 (#839496), base1 (#93a1a1), base2 (#eee8d5), base3 (#fdf6e3)",
+        "Accent colors: yellow (#b58900), orange (#cb4b16), red (#dc322f), magenta (#d33682), violet (#6c71c4), blue (#268bd2), cyan (#2aa198), green (#859900)",
+        "Text has proper contrast ratios for readability",
+        "Interactive elements (buttons, links) have clear hover states"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-012",
+      "title": "Persist Data to SQLite",
+      "description": "As a user, I want all my board data to be saved to SQLite, so I don't lose my work when I close the app.",
+      "acceptance_criteria": [
+        "All tasks are stored in SQLite database",
+        "All columns are stored in SQLite database",
+        "Column order is persisted in SQLite",
+        "Database file is created automatically on first run",
+        "Data persists across app restarts",
+        "Database operations handle errors gracefully"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-013",
+      "title": "Display Task details in a modal with rendered markdown",
+      "description": "As a user I want to see the full task details in a modal with rendered markdown when I click on a task",
+      "acceptance_criteria": [
+        "Clicking on a task opens a modal window",
+        "The task's description is rendered in Markdown",
+        "I can still drag & drop task around"
+      ],
+      "passes": false
     }
   ],
 

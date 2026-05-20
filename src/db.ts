@@ -111,6 +111,21 @@ export function deleteTask(taskId: number): boolean {
   return (result.changes ?? 0) > 0;
 }
 
+export function moveTask(
+  taskId: number,
+  targetColumnId: number,
+  targetPosition: number,
+): Task {
+  const db = getDb();
+  db.prepare(
+    "UPDATE tasks SET column_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+  ).run(targetColumnId, targetPosition, taskId);
+  const task = db
+    .prepare("SELECT * FROM tasks WHERE id = ?")
+    .get(taskId) as Task;
+  return task;
+}
+
 export function resetDb(): void {
   db?.close();
   db = null;

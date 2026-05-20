@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -220,4 +220,108 @@ test("deleteTask does not affect tasks in other columns", () => {
   deleteTask(todoTask.id);
   expect(getTasksByColumn(todoId)).toHaveLength(0);
   expect(getTasksByColumn(doneId)).toHaveLength(1);
+});
+
+test("moveTask moves a task to another column", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  const task = createTask(todoId, "Move Me", "desc");
+  const moved = moveTask(task.id, doneId, 0);
+  expect(moved.column_id).toBe(doneId);
+  expect(moved.id).toBe(task.id);
+  expect(moved.title).toBe("Move Me");
+  expect(getTasksByColumn(todoId)).toHaveLength(0);
+  expect(getTasksByColumn(doneId)).toHaveLength(1);
+});
+
+test("moveTask preserves task properties", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const inProgressId = columns.find((c) => c.name === "In Progress")!.id;
+  const task = createTask(todoId, "Preserve Me", "important desc");
+  const moved = moveTask(task.id, inProgressId, 5);
+  expect(moved.title).toBe("Preserve Me");
+  expect(moved.description).toBe("important desc");
+  expect(moved.position).toBe(5);
+  expect(moved.column_id).toBe(inProgressId);
+});
+
+test("moveTask updates position", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const task = createTask(todoId, "Position Test", null);
+  expect(task.position).toBe(0);
+  const moved = moveTask(task.id, todoId, 10);
+  expect(moved.position).toBe(10);
+});
+
+test("moveTask updates updated_at timestamp", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  const task = createTask(todoId, "Timestamp Test", null);
+  const originalUpdated = task.updated_at;
+  Bun.sleepSync(10);
+  const moved = moveTask(task.id, doneId, 0);
+  expect(moved.updated_at).toBeTruthy();
+});
+
+test("moveTask returns the moved task", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  const task = createTask(todoId, "Return Test", "desc");
+  const moved = moveTask(task.id, doneId, 0);
+  expect(moved.id).toBe(task.id);
+  expect(moved.column_id).toBe(doneId);
+  expect(moved.title).toBe("Return Test");
+  expect(moved.description).toBe("desc");
+});
+
+test("moveTask task is visible in new column via getTasksByColumn", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  createTask(todoId, "Visible Test", "desc");
+  const taskToMove = getTasksByColumn(todoId)[0]!;
+  moveTask(taskToMove.id, doneId, 0);
+  const doneTasks = getTasksByColumn(doneId);
+  expect(doneTasks).toHaveLength(1);
+  expect(doneTasks[0]!.title).toBe("Visible Test");
+});
+
+test("moveTask does not affect other tasks in source column", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  createTask(todoId, "Stay", "desc1");
+  const toMove = createTask(todoId, "Move", "desc2");
+  createTask(todoId, "Stay Too", "desc3");
+  moveTask(toMove.id, doneId, 0);
+  const todoTasks = getTasksByColumn(todoId);
+  expect(todoTasks).toHaveLength(2);
+  expect(todoTasks.map((t) => t.title)).toEqual(["Stay", "Stay Too"]);
+});
+
+test("moveTask does not affect tasks in target column", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  createTask(doneId, "Existing Done", "desc");
+  const task = createTask(todoId, "Move To Done", "desc");
+  moveTask(task.id, doneId, 1);
+  const doneTasks = getTasksByColumn(doneId);
+  expect(doneTasks).toHaveLength(2);
+});
+
+test("moveTask within same column updates position", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  createTask(todoId, "First", null);
+  const second = createTask(todoId, "Second", null);
+  createTask(todoId, "Third", null);
+  moveTask(second.id, todoId, 10);
+  const tasks = getTasksByColumn(todoId);
+  expect(tasks.map((t) => t.title)).toEqual(["First", "Third", "Second"]);
 });

@@ -10,14 +10,30 @@ marked.setOptions({
   breaks: false,
 });
 
-function TaskCard({ task, onEdit, onDelete }: { task: Task; onEdit: (task: Task) => void; onDelete: (task: Task) => void }) {
+function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onDragStart,
+  isDragging,
+}: {
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+  onDragStart: (task: Task, e: React.DragEvent) => void;
+  isDragging: boolean;
+}) {
   const htmlDescription = task.description
     ? marked.parse(task.description, { async: false })
     : null;
 
   return (
     <div
-      className="bg-[#002b36] rounded p-3 border border-[#586e75] cursor-pointer hover:border-[#268bd2] transition-colors group relative"
+      draggable
+      onDragStart={(e) => onDragStart(task, e)}
+      className={`bg-[#002b36] rounded p-3 border border-[#586e75] cursor-grab active:cursor-grabbing hover:border-[#268bd2] transition-colors group relative ${
+        isDragging ? "opacity-40" : "opacity-100"
+      }`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[#839496] font-medium flex-1">{task.title}</p>
@@ -290,12 +306,22 @@ function ColumnCard({
   onTaskCreated,
   onTaskEdit,
   onTaskDelete,
+  onDragStart,
+  onDrop,
+  onDragOver,
+  draggedTaskId,
+  isDragOver,
 }: {
   column: ColumnWithTasks["column"];
   tasks: Task[];
   onTaskCreated: (columnId: number, task: Task) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (task: Task) => void;
+  onDragStart: (task: Task, e: React.DragEvent) => void;
+  onDrop: (columnId: number, e: React.DragEvent) => void;
+  onDragOver: (columnId: number) => void;
+  draggedTaskId: number | null;
+  isDragOver: boolean;
 }) {
   const [addingTask, setAddingTask] = useState(false);
 
@@ -304,15 +330,34 @@ function ColumnCard({
     onTaskCreated(column.id, task);
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    onDragOver(column.id);
+  };
+
   return (
-    <div className="flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1">
+    <div
+      className={`flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-colors ${
+        isDragOver ? "ring-2 ring-[#268bd2]" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDrop={(e) => onDrop(column.id, e)}
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#586e75]">
         <h2 className="text-[#93a1a1] font-bold text-lg">{column.name}</h2>
         <span className="text-[#586e75] text-sm">{tasks.length}</span>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-y-auto">
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onEdit={onTaskEdit} onDelete={onTaskDelete} />
+          <TaskCard
+            key={task.id}
+            task={task}
+            onEdit={onTaskEdit}
+            onDelete={onTaskDelete}
+            onDragStart={onDragStart}
+            isDragging={draggedTaskId === task.id}
+          />
         ))}
         {addingTask ? (
           <AddTaskForm
@@ -339,6 +384,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
 
   const refreshColumns = useCallback(async () => {
     const res = await fetch("/api/columns");
@@ -381,6 +428,48 @@ export function App() {
     setDeletingTask(null);
   };
 
+  const handleDragStart = (task: Task, e: React.DragEvent) => {
+    setDraggedTaskId(task.id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(task.id));
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setDragOverColumnId(null);
+  };
+
+  const handleColumnDragOver = (columnId: number) => {
+    setDragOverColumnId(columnId);
+  };
+
+  const handleDrop = async (columnId: number, _e: React.DragEvent) => {
+    if (draggedTaskId === null) return;
+    setDragOverColumnId(null);
+    setDraggedTaskId(null);
+    try {
+      const res = await fetch(`/api/tasks/${draggedTaskId}/move`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetColumnId: columnId }),
+      });
+      if (res.ok) {
+        refreshColumns();
+      }
+    } catch {
+      // silently fail, user can retry
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      setDraggedTaskId(null);
+      setDragOverColumnId(null);
+    };
+    window.addEventListener("dragend", handler);
+    return () => window.removeEventListener("dragend", handler);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#002b36] flex items-center justify-center">
@@ -392,7 +481,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#002b36] p-6">
       <h1 className="text-[#839496] text-2xl font-bold mb-6">Kanban Board</h1>
-      <div className="flex gap-4 overflow-x-auto">
+      <div className="flex gap-4 overflow-x-auto" onDragEnd={handleDragEnd}>
         {columns.map(({ column, tasks }) => (
           <ColumnCard
             key={column.id}
@@ -401,6 +490,11 @@ export function App() {
             onTaskCreated={handleTaskCreated}
             onTaskEdit={handleTaskEdit}
             onTaskDelete={handleTaskDelete}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onDragOver={handleColumnDragOver}
+            draggedTaskId={draggedTaskId}
+            isDragOver={dragOverColumnId === column.id}
           />
         ))}
       </div>
