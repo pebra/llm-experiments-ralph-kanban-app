@@ -94,7 +94,7 @@
         "Column title updates immediately in UI",
         "Rename operation can be cancelled"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-007",

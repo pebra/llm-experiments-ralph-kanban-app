@@ -105,3 +105,20 @@ Thread: N/A
   - API move endpoint auto-calculates position (appends at end) when `targetPosition` is not provided
   - `getDb()` is imported in index.ts for the move endpoint's position calculation
  ---
+
+## Tue May 19 2026 - US-006
+Thread: N/A
+- Implemented `renameColumn(columnId, newName)` in db.ts using UPDATE on columns table
+- Added PATCH `/api/columns/:id` endpoint with name validation (cannot be empty), 404 for missing column
+- Built RenameColumnForm modal with overlay following same pattern as EditTaskForm/DeleteTaskConfirmation
+- Added rename pencil icon button to ColumnCard header, shown on hover via `group-hover:opacity-100` using `group/header` CSS class
+- Column name validation enforced both client-side and server-side
+- After successful rename, calls refreshColumns() to sync UI state
+- Wrote 7 unit tests for renameColumn covering: basic rename, property preservation, visibility via getAllColumns, other columns unaffected, tasks unaffected, whitespace handling
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts
+- **Learnings for future iterations:**
+  - Column rename uses same modal overlay pattern as task edit/delete (fixed inset-0 with backdrop)
+  - Column header uses `group/header` CSS class to avoid conflict with task card `group` class for hover states
+  - PATCH endpoint for columns follows same validation pattern as task endpoints (400 for empty name, 404 for not found)
+  - `getDb()` used in API handler to check column existence before rename
+ ---
