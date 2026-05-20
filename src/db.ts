@@ -126,6 +126,17 @@ export function moveTask(
   return task;
 }
 
+export function renameColumn(columnId: number, newName: string): Column {
+  const db = getDb();
+  db.prepare(
+    "UPDATE columns SET name = ? WHERE id = ?",
+  ).run(newName, columnId);
+  const column = db
+    .prepare("SELECT * FROM columns WHERE id = ?")
+    .get(columnId) as Column;
+  return column;
+}
+
 export function resetDb(): void {
   db?.close();
   db = null;

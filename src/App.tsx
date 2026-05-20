@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { marked } from "marked";
-import type { ColumnWithTasks, Task } from "./types";
+import type { Column, ColumnWithTasks, Task } from "./types";
 import "./index.css";
 
 const renderer = new marked.Renderer();
@@ -239,6 +239,87 @@ function EditTaskForm({
   );
 }
 
+function RenameColumnForm({
+  column,
+  onCancel,
+  onSave,
+}: {
+  column: { id: number; name: string };
+  onCancel: () => void;
+  onSave: (column: { id: number; name: string }) => void;
+}) {
+  const [name, setName] = useState(column.name);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Column name is required");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/columns/${column.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Failed to rename column");
+        return;
+      }
+      const updated = (await res.json()) as { id: number; name: string };
+      onSave(updated);
+    } catch {
+      setError("Failed to rename column");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+      <div
+        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[#93a1a1] font-bold text-lg mb-4">Rename Column</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+            placeholder="Column name *"
+            autoFocus
+          />
+          {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+              disabled={submitting}
+            >
+              {submitting ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function DeleteTaskConfirmation({
   task,
   onCancel,
@@ -311,6 +392,7 @@ function ColumnCard({
   onDragOver,
   draggedTaskId,
   isDragOver,
+  onRename,
 }: {
   column: ColumnWithTasks["column"];
   tasks: Task[];
@@ -322,6 +404,7 @@ function ColumnCard({
   onDragOver: (columnId: number) => void;
   draggedTaskId: number | null;
   isDragOver: boolean;
+  onRename: (column: ColumnWithTasks["column"]) => void;
 }) {
   const [addingTask, setAddingTask] = useState(false);
 
@@ -344,9 +427,18 @@ function ColumnCard({
       onDragOver={handleDragOver}
       onDrop={(e) => onDrop(column.id, e)}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#586e75]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#586e75] group/header">
         <h2 className="text-[#93a1a1] font-bold text-lg">{column.name}</h2>
-        <span className="text-[#586e75] text-sm">{tasks.length}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onRename(column)}
+            className="opacity-0 group-hover/header:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
+            title="Rename column"
+          >
+            &#9998;
+          </button>
+          <span className="text-[#586e75] text-sm">{tasks.length}</span>
+        </div>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-y-auto">
         {tasks.map((task) => (
@@ -384,6 +476,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [renamingColumn, setRenamingColumn] = useState<Column | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
 
@@ -426,6 +519,19 @@ export function App() {
 
   const handleDeleteCancel = () => {
     setDeletingTask(null);
+  };
+
+  const handleColumnRename = (column: Column) => {
+    setRenamingColumn(column);
+  };
+
+  const handleColumnRenamed = () => {
+    setRenamingColumn(null);
+    refreshColumns();
+  };
+
+  const handleRenameCancel = () => {
+    setRenamingColumn(null);
   };
 
   const handleDragStart = (task: Task, e: React.DragEvent) => {
@@ -495,6 +601,7 @@ export function App() {
             onDragOver={handleColumnDragOver}
             draggedTaskId={draggedTaskId}
             isDragOver={dragOverColumnId === column.id}
+            onRename={handleColumnRename}
           />
         ))}
       </div>
@@ -510,6 +617,13 @@ export function App() {
           task={deletingTask}
           onCancel={handleDeleteCancel}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+      {renamingColumn && (
+        <RenameColumnForm
+          column={renamingColumn}
+          onCancel={handleRenameCancel}
+          onSave={handleColumnRenamed}
         />
       )}
     </div>

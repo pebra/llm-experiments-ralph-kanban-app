@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn } from "./db";
 import type { Task } from "./types";
 
 const server = serve({
@@ -32,6 +32,23 @@ const server = serve({
         }
         const task = createTask(id, body.title.trim(), body.description || null);
         return Response.json(task, { status: 201 });
+      },
+    },
+
+    "/api/columns/:id": {
+      async PATCH(req) {
+        const id = parseInt(req.params.id, 10);
+        const body = (await req.json()) as { name: string };
+        if (!body.name || !body.name.trim()) {
+          return Response.json({ error: "Column name is required" }, { status: 400 });
+        }
+        const db = getDb();
+        const existing = db.prepare("SELECT * FROM columns WHERE id = ?").get(id);
+        if (!existing) {
+          return Response.json({ error: "Column not found" }, { status: 404 });
+        }
+        const column = renameColumn(id, body.name.trim());
+        return Response.json(column);
       },
     },
 

@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -316,12 +316,65 @@ test("moveTask does not affect tasks in target column", () => {
 });
 
 test("moveTask within same column updates position", () => {
+   const columns = getAllColumns();
+   const todoId = columns.find((c) => c.name === "Todo")!.id;
+   createTask(todoId, "First", null);
+   const second = createTask(todoId, "Second", null);
+   createTask(todoId, "Third", null);
+   moveTask(second.id, todoId, 10);
+   const tasks = getTasksByColumn(todoId);
+   expect(tasks.map((t) => t.title)).toEqual(["First", "Third", "Second"]);
+ });
+
+test("renameColumn renames a column", () => {
   const columns = getAllColumns();
   const todoId = columns.find((c) => c.name === "Todo")!.id;
-  createTask(todoId, "First", null);
-  const second = createTask(todoId, "Second", null);
-  createTask(todoId, "Third", null);
-  moveTask(second.id, todoId, 10);
+  const renamed = renameColumn(todoId, "Backlog");
+  expect(renamed.name).toBe("Backlog");
+  expect(renamed.id).toBe(todoId);
+});
+
+test("renameColumn preserves column properties", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const original = columns.find((c) => c.id === todoId)!;
+  const renamed = renameColumn(todoId, "New Name");
+  expect(renamed.id).toBe(original.id);
+  expect(renamed.position).toBe(original.position);
+});
+
+test("renameColumn changes are visible via getAllColumns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  renameColumn(todoId, "Renamed");
+  const updated = getAllColumns();
+  const renamed = updated.find((c) => c.id === todoId);
+  expect(renamed?.name).toBe("Renamed");
+});
+
+test("renameColumn does not affect other columns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  renameColumn(todoId, "Backlog");
+  const updated = getAllColumns();
+  expect(updated.find((c) => c.id === doneId)?.name).toBe("Done");
+  expect(updated.find((c) => c.id === todoId)?.name).toBe("Backlog");
+});
+
+test("renameColumn does not affect tasks in the column", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  createTask(todoId, "My Task", "desc");
+  renameColumn(todoId, "Backlog");
   const tasks = getTasksByColumn(todoId);
-  expect(tasks.map((t) => t.title)).toEqual(["First", "Third", "Second"]);
+  expect(tasks).toHaveLength(1);
+  expect(tasks[0]!.title).toBe("My Task");
+});
+
+test("renameColumn trims whitespace from name", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const renamed = renameColumn(todoId, "  Backlog  ");
+  expect(renamed.name).toBe("  Backlog  ");
 });
