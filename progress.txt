@@ -8,6 +8,10 @@ Started: Mon May 18 09:43:29 PM EDT 2026
 - API endpoints use Bun.serve() routes pattern with `Response.json()`
 - Frontend fetches data from `/api/columns` endpoint on mount
 - Tests use `bun:test` with `beforeEach` for cleanup via `resetDb()`
+- HTML5 native drag-and-drop API used for kanban (no external DnD library)
+- `refreshColumns()` pattern: after any mutation, re-fetch from `/api/columns` to sync UI
+- API endpoints for task mutations: POST create, PATCH update, DELETE delete, PUT move
+- `getDb()` exported from db.ts for ad-hoc queries in API handlers
 
 ## Mon May 19 2026 - US-001
 Thread: N/A
@@ -79,4 +83,25 @@ Thread: N/A
   - TaskCard action buttons are in a flex container with `gap-1`, both using `group-hover:opacity-100`
   - Delete button uses red (#dc322f) hover color to signal destructive action
   - `result.changes` from bun:sqlite DELETE returns number of affected rows
+ ---
+
+## Tue May 19 2026 - US-005
+Thread: N/A
+- Implemented `moveTask(taskId, targetColumnId, targetPosition)` in db.ts for updating task column and position
+- Added PUT `/api/tasks/:id/move` endpoint that accepts `targetColumnId` and optional `targetPosition`
+- Implemented HTML5 native drag-and-drop API in App.tsx:
+  - TaskCard is now `draggable` with `onDragStart` setting task ID in dataTransfer
+  - ColumnCard acts as drop zone with `onDragOver`, `onDrop` handlers
+  - Visual feedback: 40% opacity on dragged task, blue ring (ring-2 ring-[#268bd2]) on drop target column
+  - `dragend` window event listener resets drag state globally
+- Added 9 unit tests for moveTask covering: cross-column move, property preservation, position update, timestamp update, return value, visibility, isolation, and same-column reordering
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
+- **Learnings for future iterations:**
+  - HTML5 native drag-and-drop API is sufficient for simple kanban (no dnd-kit or react-beautiful-dnd needed)
+  - `e.dataTransfer.setData("text/plain", String(task.id))` is the standard way to pass data
+  - `e.preventDefault()` in `onDragOver` is required to allow drops
+  - `e.dataTransfer.dropEffect = "move"` provides the correct cursor feedback
+  - `onDragEnd` on the container + `window.addEventListener("dragend")` ensures clean state reset
+  - API move endpoint auto-calculates position (appends at end) when `targetPosition` is not provided
+  - `getDb()` is imported in index.ts for the move endpoint's position calculation
  ---

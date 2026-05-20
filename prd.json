@@ -68,10 +68,10 @@
     "passes": true
     },
     {
-      "id": "US-005",
-      "title": "Drag and Drop Tasks",
-      "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
-      "acceptance_criteria": [
+"id": "US-005",
+    "title": "Drag and Drop Tasks",
+    "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
+    "acceptance_criteria": [
         "Tasks are draggable with mouse cursor",
         "Draggable visual feedback is shown during drag (e.g., opacity change, shadow)",
         "Drop zones highlight when dragging over a valid column",
@@ -80,7 +80,7 @@
         "Drag and drop works smoothly without UI lag",
         "Task maintains its ID and other properties when moved"
       ],
-      "passes": false
+    "passes": true
     },
     {
       "id": "US-006",

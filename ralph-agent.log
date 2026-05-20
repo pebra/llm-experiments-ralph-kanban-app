@@ -573,3 +573,95 @@ All 35 tests pass. The only typecheck output is a pre-existing `baseUrl` depreca
 [0m$ [0mbunx tsc --noEmit 2>&1 | grep -v "baseUrl" | grep -v "ignoreDeprecations" | grep -v "ts6" || echo "No real errors"
 No real errors
 [0m
+[0m$ [0mgit add -A && git commit -m "feat: US-005 - Drag and Drop Tasks"
+[main 9c0bd17] feat: US-005 - Drag and Drop Tasks
+ 6 files changed, 756 insertions(+), 474 deletions(-)
+[0m
+All checks pass. Let me commit and update the PRD:
+[0m← [0mEdit prd.json
+Index: /home/pebra/Sync/Dev/ailab/trello13/prd.json
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/prd.json
++++ /home/pebra/Sync/Dev/ailab/trello13/prd.json
+@@ -67,21 +67,21 @@
+       ],
+     "passes": true
+     },
+     {
+-      "id": "US-005",
+-      "title": "Drag and Drop Tasks",
+-      "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
+-      "acceptance_criteria": [
++"id": "US-005",
++    "title": "Drag and Drop Tasks",
++    "description": "As a user, I want to drag and drop tasks between columns, so I can easily move tasks through my workflow.",
++    "acceptance_criteria": [
+         "Tasks are draggable with mouse cursor",
+         "Draggable visual feedback is shown during drag (e.g., opacity change, shadow)",
+         "Drop zones highlight when dragging over a valid column",
+         "Dropping a task on a column moves the task to that column",
+         "Task movement is persisted to SQLite database",
+         "Drag and drop works smoothly without UI lag",
+         "Task maintains its ID and other properties when moved"
+       ],
+-      "passes": false
++    "passes": true
+     },
+     {
+       "id": "US-006",
+       "title": "Rename Column",
+
+[0m
+[0m← [0mEdit progress.txt
+Index: /home/pebra/Sync/Dev/ailab/trello13/progress.txt
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/progress.txt
++++ /home/pebra/Sync/Dev/ailab/trello13/progress.txt
+@@ -79,4 +79,25 @@
+   - TaskCard action buttons are in a flex container with `gap-1`, both using `group-hover:opacity-100`
+   - Delete button uses red (#dc322f) hover color to signal destructive action
+   - `result.changes` from bun:sqlite DELETE returns number of affected rows
+  ---
++
++## Tue May 19 2026 - US-005
++Thread: N/A
++- Implemented `moveTask(taskId, targetColumnId, targetPosition)` in db.ts for updating task column and position
++- Added PUT `/api/tasks/:id/move` endpoint that accepts `targetColumnId` and optional `targetPosition`
++- Implemented HTML5 native drag-and-drop API in App.tsx:
++  - TaskCard is now `draggable` with `onDragStart` setting task ID in dataTransfer
++  - ColumnCard acts as drop zone with `onDragOver`, `onDrop` handlers
++  - Visual feedback: 40% opacity on dragged task, blue ring (ring-2 ring-[#268bd2]) on drop target column
++  - `dragend` window event listener resets drag state globally
++- Added 9 unit tests for moveTask covering: cross-column move, property preservation, position update, timestamp update, return value, visibility, isolation, and same-column reordering
++- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
++- **Learnings for future iterations:**
++  - HTML5 native drag-and-drop API is sufficient for simple kanban (no dnd-kit or react-beautiful-dnd needed)
++  - `e.dataTransfer.setData("text/plain", String(task.id))` is the standard way to pass data
++  - `e.preventDefault()` in `onDragOver` is required to allow drops
++  - `e.dataTransfer.dropEffect = "move"` provides the correct cursor feedback
++  - `onDragEnd` on the container + `window.addEventListener("dragend")` ensures clean state reset
++  - API move endpoint auto-calculates position (appends at end) when `targetPosition` is not provided
++  - `getDb()` is imported in index.ts for the move endpoint's position calculation
++ ---
+
+[0m
+[0m← [0mEdit progress.txt
+Index: /home/pebra/Sync/Dev/ailab/trello13/progress.txt
+===================================================================
+--- /home/pebra/Sync/Dev/ailab/trello13/progress.txt
++++ /home/pebra/Sync/Dev/ailab/trello13/progress.txt
+@@ -7,8 +7,12 @@
+ - Database is in-memory by default, use `DB_PATH` env var for file-based storage
+ - API endpoints use Bun.serve() routes pattern with `Response.json()`
+ - Frontend fetches data from `/api/columns` endpoint on mount
+ - Tests use `bun:test` with `beforeEach` for cleanup via `resetDb()`
++- HTML5 native drag-and-drop API used for kanban (no external DnD library)
++- `refreshColumns()` pattern: after any mutation, re-fetch from `/api/columns` to sync UI
++- API endpoints for task mutations: POST create, PATCH update, DELETE delete, PUT move
++- `getDb()` exported from db.ts for ad-hoc queries in API handlers
+ 
+ ## Mon May 19 2026 - US-001
+ Thread: N/A
+ - Implemented SQLite database layer with columns and tasks tables
+
+[0m
