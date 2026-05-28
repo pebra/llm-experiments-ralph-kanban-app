@@ -162,7 +162,7 @@
         "Text has proper contrast ratios for readability",
         "Interactive elements (buttons, links) have clear hover states"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-012",

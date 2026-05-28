@@ -191,3 +191,22 @@ Thread: N/A
   - Description truncation threshold is 120 characters for "long" detection
   - Metadata footer always shows (not conditional), using text-xs for subtle presentation
  ---
+
+## Thu May 28 2026 - US-011
+Thread: N/A
+- Centralized all Solarized Dark colors as CSS custom properties (--sol-*) in index.css
+- Replaced all hardcoded inline hex colors in App.tsx with CSS variable references
+- Added focus-visible states for accessibility (outline on focus)
+- Added button and link hover transitions for smooth interactive feedback
+- Added scrollbar styling for dark theme consistency
+- Added prose heading, blockquote, and hr styles using Solarized palette
+- Used all 8 base colors (base03-base3) and all 8 accent colors (yellow, orange, red, magenta, violet, blue, cyan, green)
+- Yellow for task count badges, magenta for "Show more/less" links, violet for decorative accent bar, base00 for subtle borders, base2 for high-contrast headings
+- Files changed: src/index.css, src/App.tsx
+- **Learnings for future iterations:**
+  - All theme colors are now CSS custom properties prefixed with --sol- (e.g., --sol-blue, --sol-base03)
+  - App.tsx uses var(--sol-*) in Tailwind arbitrary value syntax: bg-[var(--sol-base03)]
+  - Focus-visible (not focus) is used to avoid outline on mouse clicks
+  - Prose styles for markdown rendering use Solarized variables for headings, blockquotes, links
+  - Scrollbar styling uses ::-webkit-scrollbar pseudo-elements for dark theme
+---
