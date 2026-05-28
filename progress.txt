@@ -175,3 +175,19 @@ Thread: N/A
   - `dragend` fires on the drag source element, not parent containers; window listener is needed for reliable cleanup
   - `resetDragState` must clear both `draggedTaskId` and `draggedColumnId` to avoid stale state
  ---
+
+## Thu May 28 2026 - US-010
+Thread: N/A
+- Added `formatDate()` helper function for displaying human-readable dates
+- Enhanced TaskCard with expandable description: "Show more"/"Show less" toggle for descriptions > 120 chars
+- Short descriptions use line-clamp-2, long descriptions use line-clamp-3 when collapsed
+- Added metadata footer to TaskCard showing "Created" and "Updated" dates with `formatDate()` helper
+- Metadata separated from content with top border (`border-t border-[#073642]`)
+- Date format uses `toLocaleDateString` with month/day/year (e.g., "May 19, 2026")
+- Files changed: src/App.tsx
+- **Learnings for future iterations:**
+  - TaskCard now uses local `useState` for expanded/collapsed description state
+  - `formatDate()` helper is a standalone function, not React component
+  - Description truncation threshold is 120 characters for "long" detection
+  - Metadata footer always shows (not conditional), using text-xs for subtle presentation
+ ---

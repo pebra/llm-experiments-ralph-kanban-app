@@ -149,7 +149,7 @@
         "Long descriptions are handled gracefully (truncation with 'more' option)",
         "Task metadata (created date, moved date) is optionally displayed"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-011",
