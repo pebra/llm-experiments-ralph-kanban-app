@@ -10,6 +10,15 @@ marked.setOptions({
   breaks: false,
 });
 
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function TaskCard({
   task,
   onEdit,
@@ -23,9 +32,11 @@ function TaskCard({
   onDragStart: (task: Task, e: React.DragEvent) => void;
   isDragging: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const htmlDescription = task.description
     ? marked.parse(task.description, { async: false })
     : null;
+  const hasLongDescription = task.description && task.description.length > 120;
 
   return (
     <div
@@ -55,11 +66,40 @@ function TaskCard({
         </div>
       </div>
       {htmlDescription && (
-        <div
-          className="text-[#586e75] text-sm mt-1 line-clamp-2 prose prose-invert prose-max-w-none"
-          dangerouslySetInnerHTML={{ __html: htmlDescription as string }}
-        />
+        <>
+          <div
+            className={`text-[#586e75] text-sm mt-1 prose prose-invert prose-max-w-none ${
+              !expanded && !hasLongDescription ? "line-clamp-2" : ""
+            } ${!expanded && hasLongDescription ? "line-clamp-3" : ""}`}
+            dangerouslySetInnerHTML={{ __html: htmlDescription as string }}
+          />
+          {hasLongDescription && !expanded && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+              className="text-[#268bd2] text-xs mt-0.5 hover:underline"
+            >
+              Show more
+            </button>
+          )}
+          {expanded && hasLongDescription && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+              className="text-[#268bd2] text-xs mt-0.5 hover:underline"
+            >
+              Show less
+            </button>
+          )}
+        </>
       )}
+      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#073642] text-[#586e75] text-xs">
+        <span title={`Created: ${formatDate(task.created_at)}`}>
+          Created {formatDate(task.created_at)}
+        </span>
+        <span>&middot;</span>
+        <span title={`Updated: ${formatDate(task.updated_at)}`}>
+          Updated {formatDate(task.updated_at)}
+        </span>
+      </div>
     </div>
   );
 }
