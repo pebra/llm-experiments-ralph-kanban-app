@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn, createColumn, deleteColumn } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn, createColumn, deleteColumn, reorderColumn } from "./db";
 import type { Task } from "./types";
 
 const server = serve({
@@ -65,6 +65,20 @@ const server = serve({
           return Response.json({ error: "Column not found or cannot be deleted" }, { status: 404 });
         }
         return new Response(null, { status: 204 });
+      },
+    },
+
+    "/api/columns/:id/reorder": {
+      async PUT(req) {
+        const id = parseInt(req.params.id, 10);
+        const body = (await req.json()) as { targetPosition: number };
+        const db = getDb();
+        const existing = db.prepare("SELECT * FROM columns WHERE id = ?").get(id);
+        if (!existing) {
+          return Response.json({ error: "Column not found" }, { status: 404 });
+        }
+        const column = reorderColumn(id, body.targetPosition);
+        return Response.json(column);
       },
     },
 

@@ -187,6 +187,30 @@ export function deleteColumn(columnId: number): boolean {
   return true;
 }
 
+export function reorderColumn(columnId: number, targetPosition: number): Column {
+  const db = getDb();
+  const column = db
+    .prepare("SELECT * FROM columns WHERE id = ?")
+    .get(columnId) as Column;
+  if (!column) {
+    throw new Error("Column not found");
+  }
+  const oldPosition = column.position;
+  if (oldPosition === targetPosition) {
+    return column;
+  }
+  db.prepare(
+    "UPDATE columns SET position = ? WHERE position = ?",
+  ).run(oldPosition, targetPosition);
+  db.prepare(
+    "UPDATE columns SET position = ? WHERE id = ?",
+  ).run(targetPosition, columnId);
+  const updated = db
+    .prepare("SELECT * FROM columns WHERE id = ?")
+    .get(columnId) as Column;
+  return updated;
+}
+
 export function resetDb(): void {
   db?.close();
   db = null;

@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn, reorderColumn } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -527,4 +527,97 @@ test("deleteColumn cannot delete renamed default columns", () => {
   expect(result).toBe(false);
   const after = getAllColumns();
   expect(after.find((c) => c.id === todoId.id)).toBeTruthy();
+});
+
+test("reorderColumn swaps positions with target column", () => {
+  const columns = getAllColumns();
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  const doneCol = columns.find((c) => c.name === "Done")!;
+  expect(todoCol.position).toBe(0);
+  expect(doneCol.position).toBe(2);
+  const reordered = reorderColumn(todoCol.id, 2);
+  expect(reordered.position).toBe(2);
+  const after = getAllColumns();
+  expect(after.find((c) => c.id === todoCol.id)?.position).toBe(2);
+  expect(after.find((c) => c.id === doneCol.id)?.position).toBe(0);
+});
+
+test("reorderColumn preserves column properties", () => {
+  const columns = getAllColumns();
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  const reordered = reorderColumn(todoCol.id, 2);
+  expect(reordered.id).toBe(todoCol.id);
+  expect(reordered.name).toBe("Todo");
+});
+
+test("reorderColumn no-op when same position", () => {
+  const columns = getAllColumns();
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  const reordered = reorderColumn(todoCol.id, 0);
+  expect(reordered.position).toBe(0);
+  const after = getAllColumns();
+  expect(after.map((c) => c.position)).toEqual([0, 1, 2]);
+});
+
+test("reorderColumn updates are visible via getAllColumns", () => {
+  const before = getAllColumns();
+  const todoCol = before.find((c) => c.name === "Todo")!;
+  reorderColumn(todoCol.id, 2);
+  const after = getAllColumns();
+  const names = after.map((c) => c.name);
+  expect(names).toEqual(["Done", "In Progress", "Todo"]);
+});
+
+test("reorderColumn does not affect tasks in columns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  const doneId = columns.find((c) => c.name === "Done")!.id;
+  createTask(todoId, "Todo Task", "desc");
+  createTask(doneId, "Done Task", "desc");
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  reorderColumn(todoCol.id, 2);
+  const todoTasks = getTasksByColumn(todoId);
+  const doneTasks = getTasksByColumn(doneId);
+  expect(todoTasks).toHaveLength(1);
+  expect(doneTasks).toHaveLength(1);
+});
+
+test("reorderColumn swaps adjacent columns", () => {
+  const columns = getAllColumns();
+  const inProgressCol = columns.find((c) => c.name === "In Progress")!;
+  const doneCol = columns.find((c) => c.name === "Done")!;
+  expect(inProgressCol.position).toBe(1);
+  expect(doneCol.position).toBe(2);
+  reorderColumn(inProgressCol.id, 2);
+  const after = getAllColumns();
+  expect(after.find((c) => c.id === inProgressCol.id)?.position).toBe(2);
+  expect(after.find((c) => c.id === doneCol.id)?.position).toBe(1);
+});
+
+test("reorderColumn with custom columns", () => {
+  createColumn("Review");
+  const columns = getAllColumns();
+  const reviewCol = columns.find((c) => c.name === "Review")!;
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  expect(reviewCol.position).toBe(3);
+  reorderColumn(reviewCol.id, 0);
+  const after = getAllColumns();
+  const names = after.map((c) => c.name);
+  expect(names).toEqual(["Review", "In Progress", "Done", "Todo"]);
+});
+
+test("reorderColumn throws for non-existent column", () => {
+  expect(() => reorderColumn(99999, 0)).toThrow("Column not found");
+});
+
+test("reorderColumn maintains unique positions", () => {
+  createColumn("A");
+  createColumn("B");
+  createColumn("C");
+  const columns = getAllColumns();
+  const cCol = columns.find((c) => c.name === "C")!;
+  reorderColumn(cCol.id, 0);
+  const after = getAllColumns();
+  const positions = after.map((c) => c.position);
+  expect(positions).toHaveLength(new Set(positions).size);
 });

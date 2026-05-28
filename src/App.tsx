@@ -526,10 +526,12 @@ function ColumnCard({
   onTaskCreated,
   onTaskEdit,
   onTaskDelete,
-  onDragStart,
+  onTaskDragStart,
+  onColumnDragStart,
   onDrop,
   onDragOver,
   draggedTaskId,
+  draggedColumnId,
   isDragOver,
   onRename,
   onDelete,
@@ -539,10 +541,12 @@ function ColumnCard({
   onTaskCreated: (columnId: number, task: Task) => void;
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (task: Task) => void;
-  onDragStart: (task: Task, e: React.DragEvent) => void;
+  onTaskDragStart: (task: Task, e: React.DragEvent) => void;
+  onColumnDragStart: (columnId: number, e: React.DragEvent) => void;
   onDrop: (columnId: number, e: React.DragEvent) => void;
   onDragOver: (columnId: number) => void;
   draggedTaskId: number | null;
+  draggedColumnId: number | null;
   isDragOver: boolean;
   onRename: (column: ColumnWithTasks["column"]) => void;
   onDelete: (column: ColumnWithTasks["column"]) => void;
@@ -562,9 +566,11 @@ function ColumnCard({
 
   return (
     <div
-      className={`flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-colors ${
+      draggable
+      onDragStart={(e) => onColumnDragStart(column.id, e)}
+      className={`flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-all ${
         isDragOver ? "ring-2 ring-[#268bd2]" : ""
-      }`}
+      } ${draggedColumnId === column.id ? "opacity-40" : "opacity-100"}`}
       onDragOver={handleDragOver}
       onDrop={(e) => onDrop(column.id, e)}
     >
@@ -597,7 +603,7 @@ function ColumnCard({
             task={task}
             onEdit={onTaskEdit}
             onDelete={onTaskDelete}
-            onDragStart={onDragStart}
+            onDragStart={onTaskDragStart}
             isDragging={draggedTaskId === task.id}
           />
         ))}
@@ -631,6 +637,7 @@ export function App() {
   const [deletingColumn, setDeletingColumn] = useState<Column | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
+  const [draggedColumnId, setDraggedColumnId] = useState<number | null>(null);
 
   const refreshColumns = useCallback(async () => {
     const res = await fetch("/api/columns");
@@ -718,27 +725,50 @@ export function App() {
     e.dataTransfer.setData("text/plain", String(task.id));
   };
 
-  const handleDragEnd = () => {
+  const resetDragState = () => {
     setDraggedTaskId(null);
     setDragOverColumnId(null);
+    setDraggedColumnId(null);
   };
 
   const handleColumnDragOver = (columnId: number) => {
     setDragOverColumnId(columnId);
   };
 
-  const handleDrop = async (columnId: number, _e: React.DragEvent) => {
-    if (draggedTaskId === null) return;
-    setDragOverColumnId(null);
-    setDraggedTaskId(null);
+  const handleColumnDragStart = (columnId: number, e: React.DragEvent) => {
+    if (!e.dataTransfer.getData("text/plain")) {
+      setDraggedColumnId(columnId);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", `col-${columnId}`);
+    }
+  };
+
+  const handleDrop = async (columnId: number, e: React.DragEvent) => {
+    resetDragState();
+    const data = e.dataTransfer.getData("text/plain");
     try {
-      const res = await fetch(`/api/tasks/${draggedTaskId}/move`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetColumnId: columnId }),
-      });
-      if (res.ok) {
-        refreshColumns();
+      if (data.startsWith("col-")) {
+        const draggedColId = parseInt(data.slice(4), 10);
+        const targetColumn = columns.find((c) => c.column.id === columnId);
+        if (targetColumn && draggedColId !== columnId) {
+          const res = await fetch(`/api/columns/${draggedColId}/reorder`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ targetPosition: targetColumn.column.position }),
+          });
+          if (res.ok) {
+            refreshColumns();
+          }
+        }
+      } else if (draggedTaskId !== null) {
+        const res = await fetch(`/api/tasks/${draggedTaskId}/move`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetColumnId: columnId }),
+        });
+        if (res.ok) {
+          refreshColumns();
+        }
       }
     } catch {
       // silently fail, user can retry
@@ -746,12 +776,8 @@ export function App() {
   };
 
   useEffect(() => {
-    const handler = () => {
-      setDraggedTaskId(null);
-      setDragOverColumnId(null);
-    };
-    window.addEventListener("dragend", handler);
-    return () => window.removeEventListener("dragend", handler);
+    window.addEventListener("dragend", resetDragState);
+    return () => window.removeEventListener("dragend", resetDragState);
   }, []);
 
   if (loading) {
@@ -765,7 +791,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#002b36] p-6">
       <h1 className="text-[#839496] text-2xl font-bold mb-6">Kanban Board</h1>
-      <div className="flex gap-4 overflow-x-auto items-start" onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 overflow-x-auto items-start" onDragEnd={resetDragState}>
         {columns.map(({ column, tasks }) => (
           <ColumnCard
             key={column.id}
@@ -774,10 +800,12 @@ export function App() {
             onTaskCreated={handleTaskCreated}
             onTaskEdit={handleTaskEdit}
             onTaskDelete={handleTaskDelete}
-            onDragStart={handleDragStart}
+            onTaskDragStart={handleDragStart}
+            onColumnDragStart={handleColumnDragStart}
             onDrop={handleDrop}
             onDragOver={handleColumnDragOver}
             draggedTaskId={draggedTaskId}
+            draggedColumnId={draggedColumnId}
             isDragOver={dragOverColumnId === column.id}
             onRename={handleColumnRename}
             onDelete={handleColumnDelete}
