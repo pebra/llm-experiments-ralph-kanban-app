@@ -42,23 +42,23 @@ function TaskCard({
     <div
       draggable
       onDragStart={(e) => onDragStart(task, e)}
-      className={`bg-[#002b36] rounded p-3 border border-[#586e75] cursor-grab active:cursor-grabbing hover:border-[#268bd2] transition-colors group relative ${
+      className={`bg-[var(--sol-base03)] rounded p-3 border border-[var(--sol-base01)] cursor-grab active:cursor-grabbing hover:border-[var(--sol-blue)] transition-colors group relative ${
         isDragging ? "opacity-40" : "opacity-100"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[#839496] font-medium flex-1">{task.title}</p>
+        <p className="text-[var(--sol-base0)] font-medium flex-1">{task.title}</p>
         <div className="flex gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
+            className="opacity-0 group-hover:opacity-100 text-[var(--sol-base01)] hover:text-[var(--sol-blue)] transition-all p-0.5 rounded"
             title="Edit task"
           >
             &#9998;
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(task); }}
-            className="opacity-0 group-hover:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
+            className="opacity-0 group-hover:opacity-100 text-[var(--sol-base01)] hover:text-[var(--sol-red)] transition-all p-0.5 rounded"
             title="Delete task"
           >
             &times;
@@ -68,7 +68,7 @@ function TaskCard({
       {htmlDescription && (
         <>
           <div
-            className={`text-[#586e75] text-sm mt-1 prose prose-invert prose-max-w-none ${
+            className={`text-[var(--sol-base01)] text-sm mt-1 prose prose-invert prose-max-w-none ${
               !expanded && !hasLongDescription ? "line-clamp-2" : ""
             } ${!expanded && hasLongDescription ? "line-clamp-3" : ""}`}
             dangerouslySetInnerHTML={{ __html: htmlDescription as string }}
@@ -76,7 +76,7 @@ function TaskCard({
           {hasLongDescription && !expanded && (
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-              className="text-[#268bd2] text-xs mt-0.5 hover:underline"
+              className="text-[var(--sol-magenta)] text-xs mt-0.5 hover:underline"
             >
               Show more
             </button>
@@ -84,14 +84,14 @@ function TaskCard({
           {expanded && hasLongDescription && (
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-              className="text-[#268bd2] text-xs mt-0.5 hover:underline"
+              className="text-[var(--sol-magenta)] text-xs mt-0.5 hover:underline"
             >
               Show less
             </button>
           )}
         </>
       )}
-      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#073642] text-[#586e75] text-xs">
+      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--sol-base00)] text-[var(--sol-base01)] text-xs">
         <span title={`Created: ${formatDate(task.created_at)}`}>
           Created {formatDate(task.created_at)}
         </span>
@@ -149,15 +149,15 @@ function AddTaskForm({
   };
 
   return (
-    <div className="bg-[#002b36] rounded p-3 border border-[#268bd2]">
-      <p className="text-[#93a1a1] text-sm mb-2">Adding task to {columnName}</p>
+    <div className="bg-[var(--sol-base03)] rounded p-3 border border-[var(--sol-blue)]">
+      <p className="text-[var(--sol-base1)] text-sm mb-2">Adding task to {columnName}</p>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
           placeholder="Task title *"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full bg-[#073642] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+          className="w-full bg-[var(--sol-base02)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)]"
           autoFocus
         />
         <textarea
@@ -165,21 +165,21 @@ function AddTaskForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full bg-[#073642] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75] resize-none"
+          className="w-full bg-[var(--sol-base02)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)] resize-none"
         />
-        {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+        {error && <p className="text-[var(--sol-red)] text-sm mb-2">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#073642] transition-colors"
+            className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base02)] transition-colors"
             disabled={submitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+            className="px-3 py-1 bg-[var(--sol-cyan)] text-[var(--sol-base03)] rounded font-medium hover:bg-[var(--sol-green)] transition-colors disabled:opacity-50"
             disabled={submitting}
           >
             {submitting ? "Saving..." : "Add Task"}
@@ -235,16 +235,16 @@ function EditTaskForm({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
       <div
-        className="bg-[#073642] rounded-lg p-6 w-full max-w-md border border-[#586e75] mx-4"
+        className="bg-[var(--sol-base02)] rounded-lg p-6 w-full max-w-md border border-[var(--sol-base01)] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[#93a1a1] font-bold text-lg mb-4">Edit Task</h2>
+        <h2 className="text-[var(--sol-base1)] font-bold text-lg mb-4">Edit Task</h2>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+            className="w-full bg-[var(--sol-base03)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)]"
             placeholder="Task title *"
             autoFocus
           />
@@ -252,22 +252,22 @@ function EditTaskForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75] resize-none"
+            className="w-full bg-[var(--sol-base03)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)] resize-none"
             placeholder="Description (optional, markdown supported)"
           />
-          {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+          {error && <p className="text-[var(--sol-red)] text-sm mb-2">{error}</p>}
           <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+              className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base03)] transition-colors"
               disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+              className="px-3 py-1 bg-[var(--sol-cyan)] text-[var(--sol-base03)] rounded font-medium hover:bg-[var(--sol-green)] transition-colors disabled:opacity-50"
               disabled={submitting}
             >
               {submitting ? "Saving..." : "Save"}
@@ -323,32 +323,32 @@ function RenameColumnForm({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
       <div
-        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        className="bg-[var(--sol-base02)] rounded-lg p-6 w-full max-w-sm border border-[var(--sol-base01)] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[#93a1a1] font-bold text-lg mb-4">Rename Column</h2>
+        <h2 className="text-[var(--sol-base1)] font-bold text-lg mb-4">Rename Column</h2>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+            className="w-full bg-[var(--sol-base03)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)]"
             placeholder="Column name *"
             autoFocus
           />
-          {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+          {error && <p className="text-[var(--sol-red)] text-sm mb-2">{error}</p>}
           <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+              className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base03)] transition-colors"
               disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+              className="px-3 py-1 bg-[var(--sol-cyan)] text-[var(--sol-base03)] rounded font-medium hover:bg-[var(--sol-green)] transition-colors disabled:opacity-50"
               disabled={submitting}
             >
               {submitting ? "Saving..." : "Save"}
@@ -391,18 +391,18 @@ function DeleteTaskConfirmation({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
       <div
-        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        className="bg-[var(--sol-base02)] rounded-lg p-6 w-full max-w-sm border border-[var(--sol-base01)] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Task</h2>
-        <p className="text-[#839496] mb-4">
+        <h2 className="text-[var(--sol-base1)] font-bold text-lg mb-2">Delete Task</h2>
+        <p className="text-[var(--sol-base0)] mb-4">
           Are you sure you want to delete &ldquo;{task.title}&rdquo;? This action cannot be undone.
         </p>
         <div className="flex gap-2 justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+            className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base03)] transition-colors"
             disabled={deleting}
           >
             Cancel
@@ -410,7 +410,7 @@ function DeleteTaskConfirmation({
           <button
             type="button"
             onClick={handleDelete}
-            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
+            className="px-3 py-1 bg-[var(--sol-red)] text-[var(--sol-base3)] rounded font-medium hover:bg-[var(--sol-orange)] transition-colors disabled:opacity-50"
             disabled={deleting}
           >
             {deleting ? "Deleting..." : "Delete"}
@@ -463,32 +463,32 @@ function AddColumnForm({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
       <div
-        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        className="bg-[var(--sol-base02)] rounded-lg p-6 w-full max-w-sm border border-[var(--sol-base01)] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[#93a1a1] font-bold text-lg mb-4">Add Column</h2>
+        <h2 className="text-[var(--sol-base1)] font-bold text-lg mb-4">Add Column</h2>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+            className="w-full bg-[var(--sol-base03)] text-[var(--sol-base0)] border border-[var(--sol-base01)] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[var(--sol-blue)] placeholder-[var(--sol-base01)]"
             placeholder="Column name *"
             autoFocus
           />
-          {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+          {error && <p className="text-[var(--sol-red)] text-sm mb-2">{error}</p>}
           <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+              className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base03)] transition-colors"
               disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+              className="px-3 py-1 bg-[var(--sol-cyan)] text-[var(--sol-base03)] rounded font-medium hover:bg-[var(--sol-green)] transition-colors disabled:opacity-50"
               disabled={submitting}
             >
               {submitting ? "Creating..." : "Add Column"}
@@ -530,18 +530,18 @@ function DeleteColumnConfirmation({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
       <div
-        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        className="bg-[var(--sol-base02)] rounded-lg p-6 w-full max-w-sm border border-[var(--sol-base01)] mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Column</h2>
-        <p className="text-[#839496] mb-4">
+        <h2 className="text-[var(--sol-base1)] font-bold text-lg mb-2">Delete Column</h2>
+        <p className="text-[var(--sol-base0)] mb-4">
           Are you sure you want to delete &ldquo;{column.name}&rdquo;? All tasks in this column will be permanently deleted. This action cannot be undone.
         </p>
         <div className="flex gap-2 justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+            className="px-3 py-1 text-[var(--sol-base1)] border border-[var(--sol-base01)] rounded hover:bg-[var(--sol-base03)] transition-colors"
             disabled={deleting}
           >
             Cancel
@@ -549,7 +549,7 @@ function DeleteColumnConfirmation({
           <button
             type="button"
             onClick={handleDelete}
-            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
+            className="px-3 py-1 bg-[var(--sol-red)] text-[var(--sol-base3)] rounded font-medium hover:bg-[var(--sol-orange)] transition-colors disabled:opacity-50"
             disabled={deleting}
           >
             {deleting ? "Deleting..." : "Delete"}
@@ -608,18 +608,18 @@ function ColumnCard({
     <div
       draggable
       onDragStart={(e) => onColumnDragStart(column.id, e)}
-      className={`flex flex-col bg-[#073642] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-all ${
-        isDragOver ? "ring-2 ring-[#268bd2]" : ""
+      className={`flex flex-col bg-[var(--sol-base02)] rounded-lg min-w-[280px] max-w-[320px] flex-1 transition-all ${
+        isDragOver ? "ring-2 ring-[var(--sol-blue)]" : ""
       } ${draggedColumnId === column.id ? "opacity-40" : "opacity-100"}`}
       onDragOver={handleDragOver}
       onDrop={(e) => onDrop(column.id, e)}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#586e75] group/header">
-        <h2 className="text-[#93a1a1] font-bold text-lg">{column.name}</h2>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--sol-base01)] group/header">
+        <h2 className="text-[var(--sol-base2)] font-bold text-lg">{column.name}</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onRename(column)}
-            className="opacity-0 group-hover/header:opacity-100 text-[#586e75] hover:text-[#268bd2] transition-all p-0.5 rounded"
+            className="opacity-0 group-hover/header:opacity-100 text-[var(--sol-base01)] hover:text-[var(--sol-blue)] transition-all p-0.5 rounded"
             title="Rename column"
           >
             &#9998;
@@ -627,13 +627,13 @@ function ColumnCard({
           {!(column as Column & { is_default: number }).is_default && (
             <button
               onClick={() => onDelete(column)}
-              className="opacity-0 group-hover/header:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
+              className="opacity-0 group-hover/header:opacity-100 text-[var(--sol-base01)] hover:text-[var(--sol-red)] transition-all p-0.5 rounded"
               title="Delete column"
             >
               &times;
             </button>
           )}
-          <span className="text-[#586e75] text-sm">{tasks.length}</span>
+          <span className="text-[var(--sol-yellow)] text-sm font-semibold">{tasks.length}</span>
         </div>
       </div>
       <div className="flex-1 p-3 space-y-2 overflow-y-auto">
@@ -657,7 +657,7 @@ function ColumnCard({
         ) : (
           <button
             onClick={() => setAddingTask(true)}
-            className="w-full py-2 text-[#586e75] border border-dashed border-[#586e75] rounded hover:border-[#268bd2] hover:text-[#268bd2] transition-colors"
+            className="w-full py-2 text-[var(--sol-base01)] border border-dashed border-[var(--sol-base01)] rounded hover:border-[var(--sol-blue)] hover:text-[var(--sol-blue)] transition-colors"
           >
             + Add Task
           </button>
@@ -822,15 +822,16 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#002b36] flex items-center justify-center">
-        <p className="text-[#839496]">Loading board...</p>
+      <div className="min-h-screen bg-[var(--sol-base03)] flex items-center justify-center">
+        <p className="text-[var(--sol-base0)]">Loading board...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#002b36] p-6">
-      <h1 className="text-[#839496] text-2xl font-bold mb-6">Kanban Board</h1>
+    <div className="min-h-screen bg-[var(--sol-base03)] p-6">
+      <h1 className="text-[var(--sol-base0)] text-2xl font-bold mb-6">Kanban Board</h1>
+      <div className="h-0.5 w-24 bg-[var(--sol-violet)] rounded mb-6"></div>
       <div className="flex gap-4 overflow-x-auto items-start" onDragEnd={resetDragState}>
         {columns.map(({ column, tasks }) => (
           <ColumnCard
@@ -853,7 +854,7 @@ export function App() {
         ))}
           <button
             onClick={handleAddColumnClick}
-            className="py-2 px-4 text-[#586e75] border border-dashed border-[#586e75] rounded-lg hover:border-[#268bd2] hover:text-[#268bd2] transition-colors min-w-[280px]"
+            className="py-2 px-4 text-[var(--sol-base01)] border border-dashed border-[var(--sol-base01)] rounded-lg hover:border-[var(--sol-blue)] hover:text-[var(--sol-blue)] transition-colors min-w-[280px]"
           >
             + Add Column
           </button>

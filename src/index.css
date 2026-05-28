@@ -3,14 +3,50 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* Solarized Dark - Base Colors */
+    --sol-base03: #002b36;
+    --sol-base02: #073642;
+    --sol-base01: #586e75;
+    --sol-base00: #657b83;
+    --sol-base0:  #839496;
+    --sol-base1:  #93a1a1;
+    --sol-base2:  #eee8d5;
+    --sol-base3:  #fdf6e3;
+
+    /* Solarized Dark - Accent Colors */
+    --sol-yellow: #b58900;
+    --sol-orange: #cb4b16;
+    --sol-red:    #dc322f;
+    --sol-magenta:#d33682;
+    --sol-violet: #6c71c4;
+    --sol-blue:   #268bd2;
+    --sol-cyan:   #2aa198;
+    --sol-green:  #859900;
   }
 
   body {
     margin: 0;
     padding: 0;
-    background-color: #002b36;
-    color: #839496;
+    background-color: var(--sol-base03);
+    color: var(--sol-base0);
     font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Focus-visible states for accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--sol-blue);
+    outline-offset: 2px;
+  }
+
+  /* Button hover transitions */
+  button {
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  /* Link hover states */
+  a {
+    transition: color 0.15s ease;
   }
 
   .prose {
@@ -26,14 +62,14 @@
   }
 
   .prose code {
-    background-color: #002b36;
+    background-color: var(--sol-base03);
     padding: 0.1em 0.3em;
     border-radius: 3px;
     font-size: 0.85em;
   }
 
   .prose pre {
-    background-color: #002b36;
+    background-color: var(--sol-base03);
     padding: 0.5em;
     border-radius: 4px;
     overflow-x: auto;
@@ -45,15 +81,56 @@
   }
 
   .prose a {
-    color: #268bd2;
+    color: var(--sol-blue);
     text-decoration: underline;
   }
 
+  .prose a:hover {
+    color: var(--sol-base2);
+  }
+
   .prose strong {
-    color: #93a1a1;
+    color: var(--sol-base1);
   }
 
   .prose em {
-    color: #586e75;
+    color: var(--sol-base01);
+  }
+
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    color: var(--sol-base2);
+  }
+
+  .prose blockquote {
+    border-left-color: var(--sol-violet);
+    color: var(--sol-base00);
+  }
+
+  .prose hr {
+    border-color: var(--sol-base02);
+  }
+
+  /* Scrollbar styling for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--sol-base03);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--sol-base01);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sol-base00);
+  }
+
+  /* Input placeholder styling */
+  ::placeholder {
+    color: var(--sol-base01);
   }
 }
