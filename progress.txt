@@ -4,16 +4,18 @@ Started: Mon May 18 09:43:29 PM EDT 2026
 
 ## Codebase Patterns
 - Use `bun:sqlite` Database for all persistence
-- Database is in-memory by default, use `DB_PATH` env var for file-based storage
+- Database defaults to `./kanban.db` file; use `setDbPath(":memory:")` for tests
 - API endpoints use Bun.serve() routes pattern with `Response.json()`
 - Frontend fetches data from `/api/columns` endpoint on mount
-- Tests use `bun:test` with `beforeEach` for cleanup via `resetDb()`
+- Tests use `bun:test` with `beforeEach` calling `setDbPath(":memory:")` for isolation
 - HTML5 native drag-and-drop API used for kanban (no external DnD library)
 - `refreshColumns()` pattern: after any mutation, re-fetch from `/api/columns` to sync UI
 - API endpoints for task mutations: POST create, PATCH update, DELETE delete, PUT move
 - `getDb()` exported from db.ts for ad-hoc queries in API handlers
 - Column reorder uses position-swap approach (swap positions, don't shift)
 - Drag data distinguished by prefix: `col-{id}` for columns, plain `{id}` for tasks
+- All db operations wrap errors with context (e.g., "Failed to create task: {message}")
+- `setDbPath()` closes existing connection and resets the db singleton
 
 ## Mon May 19 2026 - US-001
 Thread: N/A
@@ -209,4 +211,21 @@ Thread: N/A
   - Focus-visible (not focus) is used to avoid outline on mouse clicks
   - Prose styles for markdown rendering use Solarized variables for headings, blockquotes, links
   - Scrollbar styling uses ::-webkit-scrollbar pseudo-elements for dark theme
+---
+
+## Thu May 28 2026 - US-012
+Thread: N/A
+- Changed default DB_PATH from `:memory:` to `./kanban.db` for file-based persistence
+- Added `setDbPath()` and `getDbPath()` exports for runtime path control and test isolation
+- Added error handling wrappers to all database operations (getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, createColumn, renameColumn, deleteColumn, reorderColumn)
+- Updated test `beforeEach` to use `setDbPath(":memory:")` for test isolation instead of `resetDb()`
+- Added `*.db` to `.gitignore` to prevent committing database files
+- Wrote 9 unit tests for persistence covering: default file path, file creation on first run, data persistence across reconnects, column order persistence, getDbPath/setDbPath API, connection cleanup on path change, and descriptive error messages
+- Files changed: src/db.ts, src/db.test.ts, .gitignore, prd.json
+- **Learnings for future iterations:**
+  - `setDbPath()` closes existing connection and resets the singleton, useful for switching between file and in-memory DBs
+  - Tests use `setDbPath(":memory:")` in `beforeEach` for isolation; file-based persistence tests use temp paths in `/tmp`
+  - Error wrapping pattern: catch underlying error, re-throw with context (e.g., "Failed to create task: {message}")
+  - `reorderColumn` error handling preserves "Column not found" throws (doesn't wrap them)
+  - Bun SQLite creates the `.db` file automatically when the first query is executed
 ---

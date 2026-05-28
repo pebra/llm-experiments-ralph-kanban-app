@@ -1,16 +1,32 @@
 import { Database } from "bun:sqlite";
 import type { Column, Task } from "./types";
 
-const DB_PATH = process.env.DB_PATH || ":memory:";
-
+let dbPath: string = process.env.DB_PATH || "./kanban.db";
 let db: Database | null = null;
+
+export function getDbPath(): string {
+  return dbPath;
+}
+
+export function setDbPath(path: string): void {
+  if (db) {
+    db.close();
+    db = null;
+  }
+  dbPath = path;
+}
 
 export function getDb(): Database {
   if (!db) {
-    db = new Database(DB_PATH);
-    initDb(db!);
+    try {
+      db = new Database(dbPath);
+      initDb(db);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to open database at ${dbPath}: ${message}`);
+    }
   }
-  return db!;
+  return db;
 }
 
 function initDb(database: Database) {
@@ -64,21 +80,31 @@ function migrateIsDefault(database: Database) {
 }
 
 export function getAllColumns(): Column[] {
-  const db = getDb();
-  return (
-    db
-      .prepare("SELECT * FROM columns ORDER BY position ASC")
-      .all() as Column[]
-  );
+  try {
+    const database = getDb();
+    return (
+      database
+        .prepare("SELECT * FROM columns ORDER BY position ASC")
+        .all() as Column[]
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get columns: ${message}`);
+  }
 }
 
 export function getTasksByColumn(columnId: number): Task[] {
-  const db = getDb();
-  return (
-    db
-      .prepare("SELECT * FROM tasks WHERE column_id = ? ORDER BY position ASC")
-      .all(columnId) as Task[]
-  );
+  try {
+    const database = getDb();
+    return (
+      database
+        .prepare("SELECT * FROM tasks WHERE column_id = ? ORDER BY position ASC")
+        .all(columnId) as Task[]
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get tasks for column ${columnId}: ${message}`);
+  }
 }
 
 export function createTask(
@@ -86,22 +112,27 @@ export function createTask(
   title: string,
   description: string | null,
 ): Task {
-  const db = getDb();
-  const maxPos = db
-    .prepare(
-      "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
-    )
-    .get(columnId) as { maxPos: number };
-  const position = (maxPos?.maxPos ?? -1) + 1;
-  const stmt = db.prepare(
-    "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
-  );
-  const result = stmt.run(columnId, title, description, position);
-  const insertedId = Number(result.lastInsertRowid);
-  const task = db
-    .prepare("SELECT * FROM tasks WHERE id = ?")
-    .get(insertedId) as Task;
-  return task;
+  try {
+    const database = getDb();
+    const maxPos = database
+      .prepare(
+        "SELECT COALESCE(MAX(position), -1) as maxPos FROM tasks WHERE column_id = ?",
+      )
+      .get(columnId) as { maxPos: number };
+    const position = (maxPos?.maxPos ?? -1) + 1;
+    const stmt = database.prepare(
+      "INSERT INTO tasks (column_id, title, description, position) VALUES (?, ?, ?, ?)",
+    );
+    const result = stmt.run(columnId, title, description, position);
+    const insertedId = Number(result.lastInsertRowid);
+    const task = database
+      .prepare("SELECT * FROM tasks WHERE id = ?")
+      .get(insertedId) as Task;
+    return task;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create task: ${message}`);
+  }
 }
 
 export function updateTask(
@@ -109,22 +140,32 @@ export function updateTask(
   title: string,
   description: string | null,
 ): Task {
-  const db = getDb();
-  db.prepare(
-    "UPDATE tasks SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-  ).run(title, description, taskId);
-  const task = db
-    .prepare("SELECT * FROM tasks WHERE id = ?")
-    .get(taskId) as Task;
-  return task;
+  try {
+    const database = getDb();
+    database.prepare(
+      "UPDATE tasks SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    ).run(title, description, taskId);
+    const task = database
+      .prepare("SELECT * FROM tasks WHERE id = ?")
+      .get(taskId) as Task;
+    return task;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to update task ${taskId}: ${message}`);
+  }
 }
 
 export function deleteTask(taskId: number): boolean {
-  const db = getDb();
-  const result = db
-    .prepare("DELETE FROM tasks WHERE id = ?")
-    .run(taskId);
-  return (result.changes ?? 0) > 0;
+  try {
+    const database = getDb();
+    const result = database
+      .prepare("DELETE FROM tasks WHERE id = ?")
+      .run(taskId);
+    return (result.changes ?? 0) > 0;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to delete task ${taskId}: ${message}`);
+  }
 }
 
 export function moveTask(
@@ -132,83 +173,111 @@ export function moveTask(
   targetColumnId: number,
   targetPosition: number,
 ): Task {
-  const db = getDb();
-  db.prepare(
-    "UPDATE tasks SET column_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-  ).run(targetColumnId, targetPosition, taskId);
-  const task = db
-    .prepare("SELECT * FROM tasks WHERE id = ?")
-    .get(taskId) as Task;
-  return task;
+  try {
+    const database = getDb();
+    database.prepare(
+      "UPDATE tasks SET column_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    ).run(targetColumnId, targetPosition, taskId);
+    const task = database
+      .prepare("SELECT * FROM tasks WHERE id = ?")
+      .get(taskId) as Task;
+    return task;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to move task ${taskId}: ${message}`);
+  }
 }
 
 export function createColumn(name: string): Column {
-  const db = getDb();
-  const maxPos = db
-    .prepare(
-      "SELECT COALESCE(MAX(position), -1) as maxPos FROM columns",
-    )
-    .get() as { maxPos: number };
-  const position = (maxPos?.maxPos ?? -1) + 1;
-  const stmt = db.prepare(
-    "INSERT INTO columns (name, position) VALUES (?, ?)",
-  );
-  stmt.run(name, position);
-  const column = db
-    .prepare("SELECT * FROM columns WHERE name = ? AND position = ?")
-    .get(name, position) as Column;
-  return column;
+  try {
+    const database = getDb();
+    const maxPos = database
+      .prepare(
+        "SELECT COALESCE(MAX(position), -1) as maxPos FROM columns",
+      )
+      .get() as { maxPos: number };
+    const position = (maxPos?.maxPos ?? -1) + 1;
+    const stmt = database.prepare(
+      "INSERT INTO columns (name, position) VALUES (?, ?)",
+    );
+    stmt.run(name, position);
+    const column = database
+      .prepare("SELECT * FROM columns WHERE name = ? AND position = ?")
+      .get(name, position) as Column;
+    return column;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create column: ${message}`);
+  }
 }
 
 export function renameColumn(columnId: number, newName: string): Column {
-  const db = getDb();
-  db.prepare(
-    "UPDATE columns SET name = ? WHERE id = ?",
-  ).run(newName, columnId);
-  const column = db
-    .prepare("SELECT * FROM columns WHERE id = ?")
-    .get(columnId) as Column;
-  return column;
+  try {
+    const database = getDb();
+    database.prepare(
+      "UPDATE columns SET name = ? WHERE id = ?",
+    ).run(newName, columnId);
+    const column = database
+      .prepare("SELECT * FROM columns WHERE id = ?")
+      .get(columnId) as Column;
+    return column;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to rename column ${columnId}: ${message}`);
+  }
 }
 
 export function deleteColumn(columnId: number): boolean {
-  const db = getDb();
-  const column = db
-    .prepare("SELECT * FROM columns WHERE id = ?")
-    .get(columnId) as Column | undefined;
-  if (!column) {
-    return false;
+  try {
+    const database = getDb();
+    const column = database
+      .prepare("SELECT * FROM columns WHERE id = ?")
+      .get(columnId) as Column | undefined;
+    if (!column) {
+      return false;
+    }
+    if ((column as Column & { is_default: number }).is_default) {
+      return false;
+    }
+    database.prepare("DELETE FROM tasks WHERE column_id = ?").run(columnId);
+    database.prepare("DELETE FROM columns WHERE id = ?").run(columnId);
+    return true;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to delete column ${columnId}: ${message}`);
   }
-  if ((column as Column & { is_default: number }).is_default) {
-    return false;
-  }
-  db.prepare("DELETE FROM tasks WHERE column_id = ?").run(columnId);
-  db.prepare("DELETE FROM columns WHERE id = ?").run(columnId);
-  return true;
 }
 
 export function reorderColumn(columnId: number, targetPosition: number): Column {
-  const db = getDb();
-  const column = db
-    .prepare("SELECT * FROM columns WHERE id = ?")
-    .get(columnId) as Column;
-  if (!column) {
-    throw new Error("Column not found");
+  try {
+    const database = getDb();
+    const column = database
+      .prepare("SELECT * FROM columns WHERE id = ?")
+      .get(columnId) as Column;
+    if (!column) {
+      throw new Error("Column not found");
+    }
+    const oldPosition = column.position;
+    if (oldPosition === targetPosition) {
+      return column;
+    }
+    database.prepare(
+      "UPDATE columns SET position = ? WHERE position = ?",
+    ).run(oldPosition, targetPosition);
+    database.prepare(
+      "UPDATE columns SET position = ? WHERE id = ?",
+    ).run(targetPosition, columnId);
+    const updated = database
+      .prepare("SELECT * FROM columns WHERE id = ?")
+      .get(columnId) as Column;
+    return updated;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Column not found") {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to reorder column ${columnId}: ${message}`);
   }
-  const oldPosition = column.position;
-  if (oldPosition === targetPosition) {
-    return column;
-  }
-  db.prepare(
-    "UPDATE columns SET position = ? WHERE position = ?",
-  ).run(oldPosition, targetPosition);
-  db.prepare(
-    "UPDATE columns SET position = ? WHERE id = ?",
-  ).run(targetPosition, columnId);
-  const updated = db
-    .prepare("SELECT * FROM columns WHERE id = ?")
-    .get(columnId) as Column;
-  return updated;
 }
 
 export function resetDb(): void {

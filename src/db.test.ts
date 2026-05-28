@@ -1,8 +1,8 @@
-import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn, reorderColumn } from "./db";
+import { test, expect, beforeEach, afterEach } from "bun:test";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn, reorderColumn, setDbPath, getDbPath } from "./db";
 
 beforeEach(() => {
-  resetDb();
+  setDbPath(":memory:");
 });
 
 test("initializes database with default columns", () => {
@@ -620,4 +620,128 @@ test("reorderColumn maintains unique positions", () => {
   const after = getAllColumns();
   const positions = after.map((c) => c.position);
   expect(positions).toHaveLength(new Set(positions).size);
+});
+
+// US-012: Persist Data to SQLite
+
+test("default DB path is a file path, not :memory:", () => {
+  setDbPath("./kanban.db");
+  resetDb();
+  expect(getDbPath()).toBe("./kanban.db");
+});
+
+test("database file is created automatically on first run", async () => {
+  const tempPath = `${Bun.env.RUNNER_TEMP || "/tmp"}/kanban-test-${Date.now()}.db`;
+  setDbPath(tempPath);
+  resetDb();
+
+  const { stat, unlink } = await import("node:fs/promises");
+  try {
+    const columns = getAllColumns();
+    expect(columns).toHaveLength(3);
+
+    const stats = await stat(tempPath);
+    expect(stats.isFile()).toBe(true);
+  } finally {
+    resetDb();
+    try {
+      await unlink(tempPath);
+    } catch {
+      // file might not exist
+    }
+  }
+});
+
+test("data persists across database reconnects (simulated restart)", () => {
+  const tempPath = `${Bun.env.RUNNER_TEMP || "/tmp"}/kanban-persist-${Date.now()}.db`;
+  setDbPath(tempPath);
+  resetDb();
+
+  try {
+    const columns = getAllColumns();
+    const todoId = columns.find((c) => c.name === "Todo")!.id;
+    createTask(todoId, "Persistent Task", "This should survive restart");
+    createColumn("Custom Column");
+
+    expect(getAllColumns()).toHaveLength(4);
+    expect(getTasksByColumn(todoId)).toHaveLength(1);
+
+    resetDb();
+
+    const columns2 = getAllColumns();
+    expect(columns2).toHaveLength(4);
+    const customCol = columns2.find((c) => c.name === "Custom Column");
+    expect(customCol).toBeTruthy();
+
+    const todoCol2 = columns2.find((c) => c.name === "Todo")!;
+    const tasks2 = getTasksByColumn(todoCol2.id);
+    expect(tasks2).toHaveLength(1);
+    expect(tasks2[0]!.title).toBe("Persistent Task");
+    expect(tasks2[0]!.description).toBe("This should survive restart");
+  } finally {
+    resetDb();
+    import("node:fs/promises").then(({ unlink }) => {
+      unlink(tempPath).catch(() => {});
+    });
+  }
+});
+
+test("column order persists across reconnects", () => {
+  const tempPath = `${Bun.env.RUNNER_TEMP || "/tmp"}/kanban-order-${Date.now()}.db`;
+  setDbPath(tempPath);
+  resetDb();
+
+  try {
+    const columns = getAllColumns();
+    const todoCol = columns.find((c) => c.name === "Todo")!;
+    reorderColumn(todoCol.id, 2);
+
+    const before = getAllColumns().map((c) => c.name);
+    expect(before).toEqual(["Done", "In Progress", "Todo"]);
+
+    resetDb();
+
+    const after = getAllColumns().map((c) => c.name);
+    expect(after).toEqual(["Done", "In Progress", "Todo"]);
+  } finally {
+    resetDb();
+    import("node:fs/promises").then(({ unlink }) => {
+      unlink(tempPath).catch(() => {});
+    });
+  }
+});
+
+test("getDbPath returns current database path", () => {
+  expect(getDbPath()).toBe(":memory:");
+  setDbPath("./test.db");
+  expect(getDbPath()).toBe("./test.db");
+  setDbPath(":memory:");
+});
+
+test("setDbPath closes existing connection", () => {
+  setDbPath(":memory:");
+  resetDb();
+  getDb();
+
+  setDbPath(":memory:");
+  const columns = getAllColumns();
+  expect(columns).toHaveLength(3);
+});
+
+test("database operations throw descriptive errors on failure", () => {
+  setDbPath("/nonexistent/path/that/does/not/exist.db");
+  resetDb();
+  expect(() => getDb()).toThrow(/Failed to open database/);
+});
+
+test("error handling wraps underlying SQLite errors", () => {
+  setDbPath("/nonexistent/path/that/does/not/exist2.db");
+  resetDb();
+  try {
+    getAllColumns();
+    expect.unreachable("should have thrown");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    expect(message).toContain("Failed to open database");
+  }
 });
