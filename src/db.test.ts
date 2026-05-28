@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -451,4 +451,80 @@ test("createColumn does not affect existing tasks", () => {
   const tasks = getTasksByColumn(todoId);
   expect(tasks).toHaveLength(1);
   expect(tasks[0]!.title).toBe("Existing Task");
+});
+
+test("deleteColumn deletes a non-default column", () => {
+  createColumn("Custom");
+  const columns = getAllColumns();
+  const customCol = columns.find((c) => c.name === "Custom")!;
+  const result = deleteColumn(customCol.id);
+  expect(result).toBe(true);
+  const after = getAllColumns();
+  expect(after.find((c) => c.name === "Custom")).toBeUndefined();
+});
+
+test("deleteColumn deletes all tasks in the column", () => {
+  const col = createColumn("With Tasks");
+  createTask(col.id, "Task 1", "desc1");
+  createTask(col.id, "Task 2", "desc2");
+  expect(getTasksByColumn(col.id)).toHaveLength(2);
+  deleteColumn(col.id);
+  expect(getTasksByColumn(col.id)).toHaveLength(0);
+});
+
+test("deleteColumn returns false for non-existent column", () => {
+  const result = deleteColumn(99999);
+  expect(result).toBe(false);
+});
+
+test("deleteColumn returns false for default columns", () => {
+  const columns = getAllColumns();
+  const todoCol = columns.find((c) => c.name === "Todo")!;
+  const result = deleteColumn(todoCol.id);
+  expect(result).toBe(false);
+  const after = getAllColumns();
+  expect(after.find((c) => c.name === "Todo")).toBeTruthy();
+});
+
+test("deleteColumn does not affect other columns", () => {
+  createColumn("Keep");
+  createColumn("Delete");
+  const columns = getAllColumns();
+  const keepCol = columns.find((c) => c.name === "Keep")!;
+  const deleteCol = columns.find((c) => c.name === "Delete")!;
+  deleteColumn(deleteCol.id);
+  const after = getAllColumns();
+  expect(after.find((c) => c.id === keepCol.id)?.name).toBe("Keep");
+  expect(after.find((c) => c.id === deleteCol.id)).toBeUndefined();
+});
+
+test("deleteColumn removes column visible via getAllColumns", () => {
+  const before = getAllColumns();
+  createColumn("Temp");
+  expect(getAllColumns()).toHaveLength(before.length + 1);
+  const tempCol = getAllColumns().find((c) => c.name === "Temp")!;
+  deleteColumn(tempCol.id);
+  expect(getAllColumns()).toHaveLength(before.length);
+});
+
+test("deleteColumn does not affect tasks in other columns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  createTask(todoId, "Safe Task", "desc");
+  const col = createColumn("ToDelete");
+  createTask(col.id, "Will Be Deleted", "desc");
+  deleteColumn(col.id);
+  const todoTasks = getTasksByColumn(todoId);
+  expect(todoTasks).toHaveLength(1);
+  expect(todoTasks[0]!.title).toBe("Safe Task");
+});
+
+test("deleteColumn cannot delete renamed default columns", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!;
+  renameColumn(todoId.id, "Backlog");
+  const result = deleteColumn(todoId.id);
+  expect(result).toBe(false);
+  const after = getAllColumns();
+  expect(after.find((c) => c.id === todoId.id)).toBeTruthy();
 });

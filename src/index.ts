@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn, createColumn } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn, createColumn, deleteColumn } from "./db";
 import type { Task } from "./types";
 
 const server = serve({
@@ -57,6 +57,14 @@ const server = serve({
         }
         const column = renameColumn(id, body.name.trim());
         return Response.json(column);
+      },
+      async DELETE(req) {
+        const id = parseInt(req.params.id, 10);
+        const deleted = deleteColumn(id);
+        if (!deleted) {
+          return Response.json({ error: "Column not found or cannot be deleted" }, { status: 404 });
+        }
+        return new Response(null, { status: 204 });
       },
     },
 

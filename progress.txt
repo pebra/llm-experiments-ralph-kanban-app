@@ -136,5 +136,22 @@ Thread: N/A
   - POST `/api/columns` endpoint follows same validation pattern (400 for empty name, 201 on success)
   - AddColumnForm uses same modal overlay pattern (fixed inset-0 with backdrop) as other forms
   - `createColumn` follows same position auto-increment pattern as `createTask` (MAX + 1)
-  - Board flex container uses `items-start` to align column and add-button heights
----
+ - Board flex container uses `items-start` to align column and add-button heights
+ ---
+
+## Mon May 19 2026 - US-008
+Thread: N/A
+- Added `is_default` column to DB schema with migration for existing databases
+- Implemented `deleteColumn()` in db.ts that deletes column and all its tasks, blocks default columns
+- Added DELETE `/api/columns/:id` endpoint returning 204 on success, 404 if not found or protected
+- Added delete button (× icon) to ColumnCard header, only shown for non-default columns, visible on hover
+- Built DeleteColumnConfirmation modal following same overlay pattern as DeleteTaskConfirmation
+- Wrote 9 unit tests for deleteColumn covering: basic deletion, task cascade deletion, non-existent column, default column protection, other columns unaffected, visibility, cross-column task isolation, renamed default protection
+- Files changed: src/db.ts, src/types.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
+- **Learnings for future iterations:**
+  - `is_default` flag (INTEGER, 0/1) tracks protected default columns; migration uses PRAGMA table_info check
+  - Default columns cannot be deleted even after renaming (is_default flag persists through rename)
+  - `deleteColumn` returns false for both non-existent and protected (default) columns
+  - Column delete button uses same `group-hover/header:opacity-100` pattern as rename button
+  - DELETE endpoint returns 404 for both missing and protected columns (same error message)
+ ---

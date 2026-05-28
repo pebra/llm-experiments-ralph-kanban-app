@@ -111,10 +111,10 @@
       "passes": true
     },
     {
-      "id": "US-008",
-      "title": "Delete Column",
-      "description": "As a user, I want to delete a column, so I can remove workflow stages that are no longer needed.",
-      "acceptance_criteria": [
+"id": "US-008",
+    "title": "Delete Column",
+    "description": "As a user, I want to delete a column, so I can remove workflow stages that are no longer needed.",
+    "acceptance_criteria": [
         "Each column header has a delete option",
         "Clicking delete shows a confirmation dialog",
         "Deleting a column also deletes all tasks within that column",
@@ -123,7 +123,7 @@
         "Delete operation can be cancelled from confirmation dialog",
         "Default columns (Todo, In Progress, Done) cannot be deleted"
       ],
-      "passes": false
+    "passes": true
     },
     {
       "id": "US-009",

@@ -460,6 +460,66 @@ function AddColumnForm({
   );
 }
 
+function DeleteColumnConfirmation({
+  column,
+  onCancel,
+  onConfirm,
+}: {
+  column: Column;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/columns/${column.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onConfirm();
+      }
+    } catch {
+      // silently fail, user can retry
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+      <div
+        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[#93a1a1] font-bold text-lg mb-2">Delete Column</h2>
+        <p className="text-[#839496] mb-4">
+          Are you sure you want to delete &ldquo;{column.name}&rdquo;? All tasks in this column will be permanently deleted. This action cannot be undone.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="px-3 py-1 bg-[#dc322f] text-[#fdf6e3] rounded font-medium hover:bg-[#cb4b16] transition-colors disabled:opacity-50"
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColumnCard({
   column,
   tasks,
@@ -472,6 +532,7 @@ function ColumnCard({
   draggedTaskId,
   isDragOver,
   onRename,
+  onDelete,
 }: {
   column: ColumnWithTasks["column"];
   tasks: Task[];
@@ -484,6 +545,7 @@ function ColumnCard({
   draggedTaskId: number | null;
   isDragOver: boolean;
   onRename: (column: ColumnWithTasks["column"]) => void;
+  onDelete: (column: ColumnWithTasks["column"]) => void;
 }) {
   const [addingTask, setAddingTask] = useState(false);
 
@@ -516,6 +578,15 @@ function ColumnCard({
           >
             &#9998;
           </button>
+          {!(column as Column & { is_default: number }).is_default && (
+            <button
+              onClick={() => onDelete(column)}
+              className="opacity-0 group-hover/header:opacity-100 text-[#586e75] hover:text-[#dc322f] transition-all p-0.5 rounded"
+              title="Delete column"
+            >
+              &times;
+            </button>
+          )}
           <span className="text-[#586e75] text-sm">{tasks.length}</span>
         </div>
       </div>
@@ -557,6 +628,7 @@ export function App() {
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<Column | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
+  const [deletingColumn, setDeletingColumn] = useState<Column | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
 
@@ -627,6 +699,19 @@ export function App() {
     setAddingColumn(false);
   };
 
+  const handleColumnDelete = (column: Column) => {
+    setDeletingColumn(column);
+  };
+
+  const handleColumnDeleted = () => {
+    setDeletingColumn(null);
+    refreshColumns();
+  };
+
+  const handleDeleteColumnCancel = () => {
+    setDeletingColumn(null);
+  };
+
   const handleDragStart = (task: Task, e: React.DragEvent) => {
     setDraggedTaskId(task.id);
     e.dataTransfer.effectAllowed = "move";
@@ -695,6 +780,7 @@ export function App() {
             draggedTaskId={draggedTaskId}
             isDragOver={dragOverColumnId === column.id}
             onRename={handleColumnRename}
+            onDelete={handleColumnDelete}
           />
         ))}
           <button
@@ -729,6 +815,13 @@ export function App() {
         <AddColumnForm
           onCancel={handleAddColumnCancel}
           onSave={handleColumnAdded}
+        />
+      )}
+      {deletingColumn && (
+        <DeleteColumnConfirmation
+          column={deletingColumn}
+          onCancel={handleDeleteColumnCancel}
+          onConfirm={handleColumnDeleted}
         />
       )}
     </div>

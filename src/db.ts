@@ -19,6 +19,7 @@ function initDb(database: Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       position INTEGER NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -33,17 +34,32 @@ function initDb(database: Database) {
     );
   `);
 
+  migrateIsDefault(database);
+
   const count = database
     .prepare("SELECT COUNT(*) as count FROM columns")
     .get() as { count: number } | undefined;
 
   if ((count?.count ?? 0) === 0) {
     const insertColumn = database.prepare(
-      "INSERT INTO columns (name, position) VALUES (?, ?)",
+      "INSERT INTO columns (name, position, is_default) VALUES (?, ?, 1)",
     );
     insertColumn.run("Todo", 0);
     insertColumn.run("In Progress", 1);
     insertColumn.run("Done", 2);
+  }
+}
+
+function migrateIsDefault(database: Database) {
+  const info = database
+    .prepare("PRAGMA table_info(columns)")
+    .all() as Array<{ name: string }>;
+  const hasIsDefault = info.some((col) => col.name === "is_default");
+  if (!hasIsDefault) {
+    database.exec("ALTER TABLE columns ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0");
+    database.exec(
+      "UPDATE columns SET is_default = 1 WHERE name IN ('Todo', 'In Progress', 'Done') AND position IN (0, 1, 2)",
+    );
   }
 }
 
@@ -153,6 +169,22 @@ export function renameColumn(columnId: number, newName: string): Column {
     .prepare("SELECT * FROM columns WHERE id = ?")
     .get(columnId) as Column;
   return column;
+}
+
+export function deleteColumn(columnId: number): boolean {
+  const db = getDb();
+  const column = db
+    .prepare("SELECT * FROM columns WHERE id = ?")
+    .get(columnId) as Column | undefined;
+  if (!column) {
+    return false;
+  }
+  if ((column as Column & { is_default: number }).is_default) {
+    return false;
+  }
+  db.prepare("DELETE FROM tasks WHERE column_id = ?").run(columnId);
+  db.prepare("DELETE FROM columns WHERE id = ?").run(columnId);
+  return true;
 }
 
 export function resetDb(): void {
