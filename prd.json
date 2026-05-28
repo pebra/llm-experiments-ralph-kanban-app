@@ -108,7 +108,7 @@
         "New column appears in the board layout",
         "New column is initially empty (no tasks)"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-008",

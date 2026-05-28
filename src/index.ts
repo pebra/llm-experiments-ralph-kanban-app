@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn } from "./db";
+import { getAllColumns, getTasksByColumn, createTask, updateTask, deleteTask, moveTask, getDb, renameColumn, createColumn } from "./db";
 import type { Task } from "./types";
 
 const server = serve({
@@ -15,6 +15,14 @@ const server = serve({
           tasks: getTasksByColumn(col.id),
         }));
         return Response.json(columnsWithTasks);
+      },
+      async POST(req) {
+        const body = (await req.json()) as { name: string };
+        if (!body.name || !body.name.trim()) {
+          return Response.json({ error: "Column name is required" }, { status: 400 });
+        }
+        const column = createColumn(body.name.trim());
+        return Response.json(column, { status: 201 });
       },
     },
 

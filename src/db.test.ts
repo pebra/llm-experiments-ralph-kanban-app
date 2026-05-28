@@ -1,5 +1,5 @@
 import { test, expect, beforeEach } from "bun:test";
-import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn } from "./db";
+import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn } from "./db";
 
 beforeEach(() => {
   resetDb();
@@ -377,4 +377,78 @@ test("renameColumn trims whitespace from name", () => {
   const todoId = columns.find((c) => c.name === "Todo")!.id;
   const renamed = renameColumn(todoId, "  Backlog  ");
   expect(renamed.name).toBe("  Backlog  ");
+});
+
+test("createColumn creates a new column", () => {
+  const before = getAllColumns();
+  expect(before).toHaveLength(3);
+  const created = createColumn("Review");
+  expect(created.id).toBeGreaterThan(0);
+  expect(created.name).toBe("Review");
+  const after = getAllColumns();
+  expect(after).toHaveLength(4);
+});
+
+test("createColumn assigns incremental position", () => {
+  const before = getAllColumns();
+  const maxPos = Math.max(...before.map((c) => c.position));
+  const created = createColumn("Review");
+  expect(created.position).toBe(maxPos + 1);
+});
+
+test("createColumn creates column with no tasks", () => {
+  const created = createColumn("Testing");
+  const tasks = getTasksByColumn(created.id);
+  expect(tasks).toHaveLength(0);
+});
+
+test("createColumn column is visible via getAllColumns", () => {
+  createColumn("Deploy");
+  const columns = getAllColumns();
+  const found = columns.find((c) => c.name === "Deploy");
+  expect(found).toBeTruthy();
+  expect(found?.name).toBe("Deploy");
+});
+
+test("createColumn new column has valid ID", () => {
+  const created = createColumn("Staging");
+  expect(typeof created.id).toBe("number");
+  expect(created.id).toBeGreaterThan(0);
+});
+
+test("createColumn new column has created_at timestamp", () => {
+  const created = createColumn("Staging");
+  expect(created.created_at).toBeTruthy();
+  expect(typeof created.created_at).toBe("string");
+});
+
+test("createColumn multiple columns get unique positions", () => {
+  const c1 = createColumn("Alpha");
+  const c2 = createColumn("Beta");
+  const c3 = createColumn("Gamma");
+  expect(c1.position).not.toBe(c2.position);
+  expect(c2.position).not.toBe(c3.position);
+  expect(c3.position).toBeGreaterThan(c2.position);
+  expect(c2.position).toBeGreaterThan(c1.position);
+});
+
+test("createColumn does not affect existing columns", () => {
+  const before = getAllColumns();
+  createColumn("New");
+  const after = getAllColumns();
+  for (const orig of before) {
+    const match = after.find((c) => c.id === orig.id);
+    expect(match?.name).toBe(orig.name);
+    expect(match?.position).toBe(orig.position);
+  }
+});
+
+test("createColumn does not affect existing tasks", () => {
+  const columns = getAllColumns();
+  const todoId = columns.find((c) => c.name === "Todo")!.id;
+  createTask(todoId, "Existing Task", "desc");
+  createColumn("New");
+  const tasks = getTasksByColumn(todoId);
+  expect(tasks).toHaveLength(1);
+  expect(tasks[0]!.title).toBe("Existing Task");
 });

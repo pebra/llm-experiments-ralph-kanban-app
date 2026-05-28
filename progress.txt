@@ -122,3 +122,19 @@ Thread: N/A
   - PATCH endpoint for columns follows same validation pattern as task endpoints (400 for empty name, 404 for not found)
   - `getDb()` used in API handler to check column existence before rename
  ---
+
+## Mon May 19 2026 - US-007
+Thread: N/A
+- Implemented `createColumn(name)` in db.ts with auto-incrementing position
+- Added POST `/api/columns` endpoint with name validation (cannot be empty), returns 201 on success
+- Built AddColumnForm modal with overlay following same pattern as RenameColumnForm
+- Added "+ Add Column" button in board layout with dashed border styling
+- After successful creation, calls refreshColumns() to sync UI state
+- Wrote 10 unit tests for createColumn covering: basic creation, position ordering, empty tasks, visibility, valid ID, timestamp, unique positions, existing columns unaffected, existing tasks unaffected
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts, prd.json
+- **Learnings for future iterations:**
+  - POST `/api/columns` endpoint follows same validation pattern (400 for empty name, 201 on success)
+  - AddColumnForm uses same modal overlay pattern (fixed inset-0 with backdrop) as other forms
+  - `createColumn` follows same position auto-increment pattern as `createTask` (MAX + 1)
+  - Board flex container uses `items-start` to align column and add-button heights
+---

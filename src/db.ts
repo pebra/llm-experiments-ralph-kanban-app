@@ -126,6 +126,24 @@ export function moveTask(
   return task;
 }
 
+export function createColumn(name: string): Column {
+  const db = getDb();
+  const maxPos = db
+    .prepare(
+      "SELECT COALESCE(MAX(position), -1) as maxPos FROM columns",
+    )
+    .get() as { maxPos: number };
+  const position = (maxPos?.maxPos ?? -1) + 1;
+  const stmt = db.prepare(
+    "INSERT INTO columns (name, position) VALUES (?, ?)",
+  );
+  stmt.run(name, position);
+  const column = db
+    .prepare("SELECT * FROM columns WHERE name = ? AND position = ?")
+    .get(name, position) as Column;
+  return column;
+}
+
 export function renameColumn(columnId: number, newName: string): Column {
   const db = getDb();
   db.prepare(

@@ -381,6 +381,85 @@ function DeleteTaskConfirmation({
   );
 }
 
+function AddColumnForm({
+  onCancel,
+  onSave,
+}: {
+  onCancel: () => void;
+  onSave: (column: { id: number; name: string }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Column name is required");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/columns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Failed to create column");
+        return;
+      }
+      const created = (await res.json()) as { id: number; name: string };
+      onSave(created);
+    } catch {
+      setError("Failed to create column");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+      <div
+        className="bg-[#073642] rounded-lg p-6 w-full max-w-sm border border-[#586e75] mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[#93a1a1] font-bold text-lg mb-4">Add Column</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-[#002b36] text-[#839496] border border-[#586e75] rounded px-3 py-2 mb-2 focus:outline-none focus:border-[#268bd2] placeholder-[#586e75]"
+            placeholder="Column name *"
+            autoFocus
+          />
+          {error && <p className="text-[#dc322f] text-sm mb-2">{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-3 py-1 text-[#93a1a1] border border-[#586e75] rounded hover:bg-[#002b36] transition-colors"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-3 py-1 bg-[#2aa198] text-[#002b36] rounded font-medium hover:bg-[#859900] transition-colors disabled:opacity-50"
+              disabled={submitting}
+            >
+              {submitting ? "Creating..." : "Add Column"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function ColumnCard({
   column,
   tasks,
@@ -477,6 +556,7 @@ export function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<Column | null>(null);
+  const [addingColumn, setAddingColumn] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
 
@@ -534,6 +614,19 @@ export function App() {
     setRenamingColumn(null);
   };
 
+  const handleAddColumnClick = () => {
+    setAddingColumn(true);
+  };
+
+  const handleColumnAdded = () => {
+    setAddingColumn(false);
+    refreshColumns();
+  };
+
+  const handleAddColumnCancel = () => {
+    setAddingColumn(false);
+  };
+
   const handleDragStart = (task: Task, e: React.DragEvent) => {
     setDraggedTaskId(task.id);
     e.dataTransfer.effectAllowed = "move";
@@ -587,7 +680,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#002b36] p-6">
       <h1 className="text-[#839496] text-2xl font-bold mb-6">Kanban Board</h1>
-      <div className="flex gap-4 overflow-x-auto" onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 overflow-x-auto items-start" onDragEnd={handleDragEnd}>
         {columns.map(({ column, tasks }) => (
           <ColumnCard
             key={column.id}
@@ -604,7 +697,13 @@ export function App() {
             onRename={handleColumnRename}
           />
         ))}
-      </div>
+          <button
+            onClick={handleAddColumnClick}
+            className="py-2 px-4 text-[#586e75] border border-dashed border-[#586e75] rounded-lg hover:border-[#268bd2] hover:text-[#268bd2] transition-colors min-w-[280px]"
+          >
+            + Add Column
+          </button>
+        </div>
       {editingTask && (
         <EditTaskForm
           task={editingTask}
@@ -624,6 +723,12 @@ export function App() {
           column={renamingColumn}
           onCancel={handleRenameCancel}
           onSave={handleColumnRenamed}
+        />
+      )}
+      {addingColumn && (
+        <AddColumnForm
+          onCancel={handleAddColumnCancel}
+          onSave={handleColumnAdded}
         />
       )}
     </div>
