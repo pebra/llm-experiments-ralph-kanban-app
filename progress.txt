@@ -12,6 +12,8 @@ Started: Mon May 18 09:43:29 PM EDT 2026
 - `refreshColumns()` pattern: after any mutation, re-fetch from `/api/columns` to sync UI
 - API endpoints for task mutations: POST create, PATCH update, DELETE delete, PUT move
 - `getDb()` exported from db.ts for ad-hoc queries in API handlers
+- Column reorder uses position-swap approach (swap positions, don't shift)
+- Drag data distinguished by prefix: `col-{id}` for columns, plain `{id}` for tasks
 
 ## Mon May 19 2026 - US-001
 Thread: N/A
@@ -154,4 +156,22 @@ Thread: N/A
   - `deleteColumn` returns false for both non-existent and protected (default) columns
   - Column delete button uses same `group-hover/header:opacity-100` pattern as rename button
   - DELETE endpoint returns 404 for both missing and protected columns (same error message)
+ ---
+
+## Thu May 28 2026 - US-009
+Thread: N/A
+- Implemented `reorderColumn(columnId, targetPosition)` in db.ts using position-swap approach
+- Added PUT `/api/columns/:id/reorder` endpoint with column existence validation
+- Made columns draggable for reordering via HTML5 native drag-and-drop API
+- Column wrapper is `draggable` with `onDragStart` that checks if drag originated from task (via `e.dataTransfer.getData("text/plain")` check)
+- Drag data prefix `col-{id}` distinguishes column drags from task drags in drop handler
+- Visual feedback: 40% opacity on dragged column, blue ring on drop target column
+- Consolidated `resetDragState()` function for cleanup across task/column drags
+- Wrote 10 unit tests for reorderColumn covering: position swap, property preservation, no-op same position, visibility, task isolation, adjacent swap, custom columns, non-existent column error, unique positions
+- Files changed: src/db.ts, src/index.ts, src/App.tsx, src/db.test.ts
+- **Learnings for future iterations:**
+  - Column reorder uses swap approach (exchange positions) rather than insert/shift
+  - Column `onDragStart` must check `!e.dataTransfer.getData("text/plain")` to avoid interfering with task drags
+  - `dragend` fires on the drag source element, not parent containers; window listener is needed for reliable cleanup
+  - `resetDragState` must clear both `draggedTaskId` and `draggedColumnId` to avoid stale state
  ---
