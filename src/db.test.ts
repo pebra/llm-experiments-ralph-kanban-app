@@ -1,4 +1,5 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
+import { marked } from "marked";
 import { getDb, getAllColumns, getTasksByColumn, resetDb, createTask, updateTask, deleteTask, moveTask, renameColumn, createColumn, deleteColumn, reorderColumn, setDbPath, getDbPath } from "./db";
 
 beforeEach(() => {
@@ -744,4 +745,43 @@ test("error handling wraps underlying SQLite errors", () => {
     const message = error instanceof Error ? error.message : String(error);
     expect(message).toContain("Failed to open database");
   }
+});
+
+// US-013: Task details modal with rendered markdown
+
+test("marked renders plain text as paragraph", () => {
+  const html = marked.parse("Hello world", { async: false });
+  expect(html).toContain("<p>Hello world</p>");
+});
+
+test("marked renders bold text", () => {
+  const html = marked.parse("**bold**", { async: false });
+  expect(html).toContain("<strong>bold</strong>");
+});
+
+test("marked renders italic text", () => {
+  const html = marked.parse("*italic*", { async: false });
+  expect(html).toContain("<em>italic</em>");
+});
+
+test("marked renders code blocks", () => {
+  const html = marked.parse("```const x = 1;\n```", { async: false });
+  expect(html).toContain("<code");
+});
+
+test("marked renders headings", () => {
+  const html = marked.parse("# Heading", { async: false });
+  expect(html).toContain("<h1>Heading</h1>");
+});
+
+test("marked renders links", () => {
+  const html = marked.parse("[link](https://example.com)", { async: false });
+  expect(html).toContain('<a href="https://example.com">link</a>');
+});
+
+test("marked renders lists", () => {
+  const html = marked.parse("- item1\n- item2", { async: false });
+  expect(html).toContain("<ul>");
+  expect(html).toContain("<li>item1</li>");
+  expect(html).toContain("<li>item2</li>");
 });

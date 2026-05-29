@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { marked } from "marked";
 import type { Column, ColumnWithTasks, Task } from "./types";
 import "./index.css";
@@ -25,23 +25,40 @@ function TaskCard({
   onDelete,
   onDragStart,
   isDragging,
+  onClick,
 }: {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onDragStart: (task: Task, e: React.DragEvent) => void;
   isDragging: boolean;
+  onClick: (task: Task) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const dragStarted = useRef(false);
   const htmlDescription = task.description
     ? marked.parse(task.description, { async: false })
     : null;
   const hasLongDescription = task.description && task.description.length > 120;
 
+  const handleDragStart = (e: React.DragEvent) => {
+    dragStarted.current = true;
+    onDragStart(task, e);
+  };
+
+  const handleClick = () => {
+    if (!dragStarted.current) {
+      onClick(task);
+    }
+    dragStarted.current = false;
+  };
+
   return (
     <div
       draggable
-      onDragStart={(e) => onDragStart(task, e)}
+      onDragStart={handleDragStart}
+      onClick={handleClick}
+      onDragEnd={() => { dragStarted.current = false; }}
       className={`bg-[var(--sol-base03)] rounded p-3 border border-[var(--sol-base01)] cursor-grab active:cursor-grabbing hover:border-[var(--sol-blue)] transition-colors group relative ${
         isDragging ? "opacity-40" : "opacity-100"
       }`}
@@ -560,6 +577,57 @@ function DeleteColumnConfirmation({
   );
 }
 
+function TaskDetailsModal({
+  task,
+  onClose,
+}: {
+  task: Task;
+  onClose: () => void;
+}) {
+  const htmlDescription = task.description
+    ? marked.parse(task.description, { async: false })
+    : null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-[var(--sol-base02)] rounded-lg w-full max-w-lg border border-[var(--sol-base01)] mx-4 flex flex-col max-h-[80vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between px-6 pt-6 pb-2">
+          <h2 className="text-[var(--sol-base2)] font-bold text-xl flex-1">{task.title}</h2>
+          <button
+            onClick={onClose}
+            className="text-[var(--sol-base01)] hover:text-[var(--sol-red)] transition-colors p-1 rounded ml-2"
+            title="Close"
+          >
+            &times;
+          </button>
+        </div>
+        <div className="px-6 pb-4 overflow-y-auto flex-1">
+          {htmlDescription ? (
+            <div
+              className="text-[var(--sol-base0)] text-sm prose prose-invert prose-max-w-none"
+              dangerouslySetInnerHTML={{ __html: htmlDescription as string }}
+            />
+          ) : (
+            <p className="text-[var(--sol-base01)] text-sm italic">No description</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-6 py-3 border-t border-[var(--sol-base00)] text-[var(--sol-base01)] text-xs">
+          <span title={`Created: ${formatDate(task.created_at)}`}>
+            Created {formatDate(task.created_at)}
+          </span>
+          <span>&middot;</span>
+          <span title={`Updated: ${formatDate(task.updated_at)}`}>
+            Updated {formatDate(task.updated_at)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColumnCard({
   column,
   tasks,
@@ -567,6 +635,7 @@ function ColumnCard({
   onTaskEdit,
   onTaskDelete,
   onTaskDragStart,
+  onTaskClick,
   onColumnDragStart,
   onDrop,
   onDragOver,
@@ -582,6 +651,7 @@ function ColumnCard({
   onTaskEdit: (task: Task) => void;
   onTaskDelete: (task: Task) => void;
   onTaskDragStart: (task: Task, e: React.DragEvent) => void;
+  onTaskClick: (task: Task) => void;
   onColumnDragStart: (columnId: number, e: React.DragEvent) => void;
   onDrop: (columnId: number, e: React.DragEvent) => void;
   onDragOver: (columnId: number) => void;
@@ -645,6 +715,7 @@ function ColumnCard({
             onDelete={onTaskDelete}
             onDragStart={onTaskDragStart}
             isDragging={draggedTaskId === task.id}
+            onClick={onTaskClick}
           />
         ))}
         {addingTask ? (
@@ -678,6 +749,7 @@ export function App() {
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<number | null>(null);
   const [draggedColumnId, setDraggedColumnId] = useState<number | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
   const refreshColumns = useCallback(async () => {
     const res = await fetch("/api/columns");
@@ -757,6 +829,14 @@ export function App() {
 
   const handleDeleteColumnCancel = () => {
     setDeletingColumn(null);
+  };
+
+  const handleTaskClick = (task: Task) => {
+    setViewingTask(task);
+  };
+
+  const handleViewClose = () => {
+    setViewingTask(null);
   };
 
   const handleDragStart = (task: Task, e: React.DragEvent) => {
@@ -842,6 +922,7 @@ export function App() {
             onTaskEdit={handleTaskEdit}
             onTaskDelete={handleTaskDelete}
             onTaskDragStart={handleDragStart}
+            onTaskClick={handleTaskClick}
             onColumnDragStart={handleColumnDragStart}
             onDrop={handleDrop}
             onDragOver={handleColumnDragOver}
@@ -891,6 +972,12 @@ export function App() {
           column={deletingColumn}
           onCancel={handleDeleteColumnCancel}
           onConfirm={handleColumnDeleted}
+        />
+      )}
+      {viewingTask && (
+        <TaskDetailsModal
+          task={viewingTask}
+          onClose={handleViewClose}
         />
       )}
     </div>
