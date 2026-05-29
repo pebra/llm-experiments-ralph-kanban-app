@@ -1,8 +1,8 @@
 # Coded entirely by a local Qwen 3.6 27B Q8 MTP
 
-Requirements: `prd.json`
-Loop: `./ralph.sh $N` ($N number of loop runs)
-Prompt: `prompt.md`
+* Requirements: `prd.json`
+* Loop: `./ralph.sh $N` ($N number of loop runs)
+* Prompt: `prompt.md`
 
 # bun-react-tailwind-template
 
