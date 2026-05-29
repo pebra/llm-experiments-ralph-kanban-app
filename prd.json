@@ -185,9 +185,9 @@
       "acceptance_criteria": [
         "Clicking on a task opens a modal window",
         "The task's description is rendered in Markdown",
-        "I can still drag & drop task around"
-      ],
-      "passes": false
+     "I can still drag & drop task around"
+      ]
+      "passes": true
     }
   ],
 

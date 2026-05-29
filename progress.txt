@@ -229,3 +229,23 @@ Thread: N/A
   - `reorderColumn` error handling preserves "Column not found" throws (doesn't wrap them)
   - Bun SQLite creates the `.db` file automatically when the first query is executed
 ---
+
+## Thu May 28 2026 - US-013
+Thread: N/A
+- Added TaskDetailsModal component that shows full task details with rendered markdown
+- Task modal follows same overlay pattern as other modals (fixed inset-0 with backdrop click to close)
+- TaskCard now has onClick handler that opens the details modal
+- Drag-vs-click distinction uses `useRef` (`dragStarted`) to track if a drag operation occurred before the click
+- `onDragEnd` on the card resets the drag flag as a fallback
+- Modal shows task title, rendered markdown description, and created/updated metadata
+- When no description exists, shows "No description" placeholder in italic
+- Modal has scrollable content area (max-h-[80vh]) for long descriptions
+- Added 7 unit tests for `marked` markdown rendering: plain text, bold, italic, code blocks, headings, links, lists
+- Files changed: src/App.tsx, src/db.test.ts
+- **Learnings for future iterations:**
+  - TaskCard click handler uses `dragStarted` ref pattern: set to true in `handleDragStart`, reset in `onClick` and `onDragEnd`
+  - `onClick` only fires when `!dragStarted.current`, preventing modal from opening after drag-and-drop
+  - Action buttons (edit/delete) already use `e.stopPropagation()` which also prevents the card's onClick from firing
+  - `marked.parse()` with `{ async: false }` returns a string synchronously for the modal rendering
+  - Modal close button uses `&times;` entity, positioned top-right with hover-to-red transition
+---
